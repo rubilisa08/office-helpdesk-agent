@@ -93,32 +93,36 @@ class LLM:
         return text
 
     def _call_with_retry(self, system: str, user: str, as_json: bool) -> str:
+        inline = False
         for attempt in range(4):
             try:
-                return self._call(system, user, as_json)
+                return self._call(system, user, as_json, inline)
             except Exception as e:  # 429·일시 장애는 잠깐 쉬고 재시도
                 if re.search(r"PerDay|per day", str(e)):  # 하루 한도 초과는 기다려도 소용없다
                     raise QuotaExhausted(f"{self.model} 하루 무료 호출 한도를 다 썼습니다. 내일 다시 하거나 결제를 등록하세요.") from e
-                if attempt == 3 or not re.search(r"429|503|504|rate|quota|unavailable|deadline|timed? ?out", str(e), re.I):
+                if attempt == 3 or not re.search(r"429|500|503|504|rate|quota|unavailable|internal|deadline|timed? ?out", str(e), re.I):
                     raise
+                # Gemma는 일부 입력에서 system_instruction으로 보내면 500/504로 멈춘다. 지시를 본문에 합쳐 다시 보낸다.
+                if self.provider == "gemini" and re.search(r"500|504|internal|deadline", str(e), re.I):
+                    inline = True
                 time.sleep(2 ** attempt * 5)
         raise RuntimeError("unreachable")
 
     def json(self, system: str, user: str) -> dict:
         return _parse_json(self.complete(system, user, as_json=True))
 
-    def _call(self, system: str, user: str, as_json: bool) -> str:
+    def _call(self, system: str, user: str, as_json: bool, inline: bool = False) -> str:
         if self.provider == "gemini":
             from google.genai import types
 
             config = types.GenerateContentConfig(
-                system_instruction=system,
+                system_instruction=None if inline else system,
                 temperature=0,
                 response_mime_type="application/json" if as_json else "text/plain",
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             )
             resp = self._client.models.generate_content(
-                model=self.model, contents=user, config=config
+                model=self.model, contents=f"{system}\n\n{user}" if inline else user, config=config
             )
             return resp.text or ""
         kwargs = {"response_format": {"type": "json_object"}} if as_json else {}
