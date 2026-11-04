@@ -1,0 +1,43 @@
+{
+  "_note": "프롬프트 예시 전용. 평가셋(goldenset.json)·미공개셋(holdout.json)과 질문이 겹치지 않는다. evaluate.py가 겹침 여부를 검사한다.",
+  "router": [
+    {"question": "PC 관리자 권한을 받을 수 있나요?", "category": "C1", "confidence": 0.9, "alternative": null, "evidence_types": ["기준·자격", "절차·신청 방법"]},
+    {"question": "메일함이 꽉 찼어요", "category": "C1", "confidence": 0.85, "alternative": null, "evidence_types": ["기준·자격"]},
+    {"question": "출력 버튼을 눌렀는데 프린터에서 안 나와요", "category": "C1", "confidence": 0.85, "alternative": null, "evidence_types": ["절차·신청 방법"]},
+    {"question": "출근 시간을 9시 반으로 바꿀 수 있나요?", "category": "C2", "confidence": 0.9, "alternative": null, "evidence_types": ["기준·자격", "기한"]},
+    {"question": "경조휴가는 언제까지 써야 해요?", "category": "C2", "confidence": 0.9, "alternative": null, "evidence_types": ["기한"]},
+    {"question": "병가 쓰려면 진단서가 필요해요?", "category": "C2", "confidence": 0.95, "alternative": null, "evidence_types": ["기준·자격"]},
+    {"question": "명함 새로 만들고 싶어요", "category": "C3", "confidence": 0.9, "alternative": null, "evidence_types": ["절차·신청 방법"]},
+    {"question": "사무실 에어컨이 고장났어요", "category": "C3", "confidence": 0.9, "alternative": null, "evidence_types": ["절차·신청 방법", "담당 부서"]},
+    {"question": "비품함은 어디에 있어요?", "category": "C3", "confidence": 0.85, "alternative": null, "evidence_types": ["절차·신청 방법"]},
+    {"question": "현금영수증은 어떻게 받아야 증빙이 돼요?", "category": "C4", "confidence": 0.9, "alternative": null, "evidence_types": ["기준·자격"]},
+    {"question": "해외에서 쓴 카드값은 어떤 환율로 정산해요?", "category": "C4", "confidence": 0.9, "alternative": null, "evidence_types": ["기준·자격"]},
+    {"question": "접대비 정산할 때 뭘 적어야 해요?", "category": "C4", "confidence": 0.95, "alternative": null, "evidence_types": ["절차·신청 방법"]},
+    {"question": "새로 입사했는데 뭐부터 신청해야 해요?", "category": "C2", "confidence": 0.5, "alternative": "C1", "evidence_types": ["절차·신청 방법"]},
+    {"question": "로또 번호 추천해 줘요", "category": "C0", "confidence": 0.95, "alternative": null, "evidence_types": []},
+    {"question": "요즘 볼만한 드라마 있어요?", "category": "C0", "confidence": 1.0, "alternative": null, "evidence_types": []},
+    {"question": "주말에 볼 영화 추천해 주세요", "category": "C0", "confidence": 1.0, "alternative": null, "evidence_types": []}
+  ],
+  "sufficiency": [
+    {
+      "question": "병가 쓰려면 진단서가 필요해요?",
+      "sections": ["HR-06"],
+      "verdict": {"sufficient": true, "needed_sections": ["HR-06"], "reason": "HR-06에 연속 7일 이상 병가 시 진단서 제출 규정이 있다.", "missing": ""}
+    },
+    {
+      "question": "사내 동호회 지원금은 얼마예요?",
+      "sections": ["GA-03", "EX-04"],
+      "verdict": {"sufficient": false, "needed_sections": [], "reason": "근거 섹션에 동호회 지원 규정이 없다.", "missing": "동호회 지원금은 사내 규정에 없는 내용입니다."}
+    }
+  ],
+  "answer": [
+    {
+      "question": "병가 쓰려면 진단서가 필요해요?",
+      "answer": "연속 7일 이상 병가를 쓰시려면 의사 진단서를 제출해야 합니다 [HR-06]. 병가는 연차를 먼저 사용한 뒤 연간 60일 이내로 쓸 수 있으며 무급입니다 [HR-06]."
+    },
+    {
+      "question": "팀원이 8명이면 분기 회식비는 최대 얼마까지 지원돼요?",
+      "answer": "팀 회식비는 분기마다 1인당 3만원까지 지원합니다 [EX-04]. 30,000 × 8 = 240,000원까지입니다 [EX-04]. 유흥업소에서 쓴 비용은 정산하지 않습니다 [EX-04]."
+    }
+  ]
+}

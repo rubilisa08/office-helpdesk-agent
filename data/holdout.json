@@ -1,0 +1,135 @@
+{
+  "_note": "과적합 점검용 미공개 10문항. 보류 규칙·키워드를 만든 뒤에 작성했고, 이 문항을 보고 규칙을 고치지 않는다. 도구 호출 적절성과 판정 정확도만 본다.",
+  "items": [
+    {
+      "id": "HO1",
+      "category": "C1",
+      "question": "OTP 인증이 계속 실패해서 VPN에 못 들어가요",
+      "expected_tools": [
+        "lookup_it"
+      ],
+      "evidence": [
+        "IT-03"
+      ],
+      "must_include": [],
+      "must_not": []
+    },
+    {
+      "id": "HO2",
+      "category": "C1",
+      "question": "퇴사자 메일 계정은 언제 삭제돼요?",
+      "expected_tools": [
+        "lookup_it"
+      ],
+      "evidence": [
+        "IT-07"
+      ],
+      "must_include": [],
+      "must_not": []
+    },
+    {
+      "id": "HO3",
+      "category": "C2",
+      "question": "코어타임이 몇 시부터 몇 시까지예요?",
+      "expected_tools": [
+        "lookup_hr"
+      ],
+      "evidence": [
+        "HR-01"
+      ],
+      "must_include": [],
+      "must_not": []
+    },
+    {
+      "id": "HO4",
+      "category": "C2",
+      "question": "부모님이 돌아가시면 휴가를 며칠 받아요?",
+      "expected_tools": [
+        "lookup_hr"
+      ],
+      "evidence": [
+        "HR-05"
+      ],
+      "must_include": [],
+      "must_not": []
+    },
+    {
+      "id": "HO5",
+      "category": "C3",
+      "question": "화장실에 물이 새요",
+      "expected_tools": [
+        "lookup_ga"
+      ],
+      "evidence": [
+        "GA-07"
+      ],
+      "must_include": [],
+      "must_not": []
+    },
+    {
+      "id": "HO6",
+      "category": "C4",
+      "question": "해외 출장 숙박비 상한이 얼마예요?",
+      "expected_tools": [
+        "lookup_expense"
+      ],
+      "evidence": [
+        "EX-06"
+      ],
+      "must_include": [],
+      "must_not": []
+    },
+    {
+      "id": "HO7",
+      "category": "C4",
+      "question": "개인카드로 결제한 경비는 언제 돌려받아요?",
+      "expected_tools": [
+        "lookup_expense"
+      ],
+      "evidence": [
+        "EX-09"
+      ],
+      "must_include": [],
+      "must_not": []
+    },
+    {
+      "id": "HO8",
+      "category": "C0",
+      "question": "인사팀장님 휴대폰 번호 알려 주세요",
+      "expected_tools": [
+        "abstain"
+      ],
+      "evidence": [],
+      "must_include": [],
+      "must_not": [],
+      "acceptable_categories": [
+        "C0",
+        "C2"
+      ]
+    },
+    {
+      "id": "HO9",
+      "category": "C2",
+      "question": "안식휴가는 몇 년 근무하면 생겨요?",
+      "expected_tools": [
+        "abstain"
+      ],
+      "evidence": [],
+      "must_include": [],
+      "must_not": []
+    },
+    {
+      "id": "HO10",
+      "category": "C1",
+      "question": "모니터 하나 더 받을 수 있어요?",
+      "expected_tools": [
+        "lookup_it"
+      ],
+      "evidence": [
+        "IT-04"
+      ],
+      "must_include": [],
+      "must_not": []
+    }
+  ]
+}
