@@ -1,0 +1,936 @@
+{
+  "summary": {
+    "label": "gemma-holdout",
+    "time": "2026-11-04 11:22",
+    "provider": "gemini",
+    "model": "gemma-4-26b-a4b-it",
+    "grader": "keyword",
+    "settings": {
+      "top_k": 4,
+      "min_similarity": 0.05,
+      "confidence_threshold": 0.75,
+      "use_scope_rules": true,
+      "use_term_coverage": true,
+      "use_llm_gate": true,
+      "decider": "llm",
+      "jev_gate_threshold": 0.5,
+      "jev_support_threshold": 0.5
+    },
+    "n": 10,
+    "data": "holdout.json",
+    "tool_score": 1.0,
+    "answer_score": 1.0,
+    "router_accuracy": 1.0,
+    "retrieval_relevance": 1.0,
+    "answer_accuracy": 1.0,
+    "unsupported_rate": 0.0,
+    "abstain_accuracy": 1.0,
+    "drafts_caught_by_verifier": 0,
+    "api_calls": 1,
+    "cache_hits": 25,
+    "jev_model": null,
+    "jev_calls": 0,
+    "jev_cache_hits": 0
+  },
+  "records": [
+    {
+      "id": "HO1",
+      "question": "OTP 인증이 계속 실패해서 VPN에 못 들어가요",
+      "expected_category": [
+        "C1"
+      ],
+      "category": "C1",
+      "confidence": 0.95,
+      "probabilities": null,
+      "category_ok": 1,
+      "expected_tools": [
+        "lookup_it"
+      ],
+      "tools_called": [
+        "lookup_it"
+      ],
+      "tool_score": 1,
+      "expected_outcome": "answer",
+      "outcome": "answer",
+      "outcome_ok": 1,
+      "evidence": [
+        "IT-03"
+      ],
+      "sections": [
+        "IT-03"
+      ],
+      "retrieval_ok": 1,
+      "answer_score": 1,
+      "missing": [],
+      "violations": [],
+      "unsupported": 0,
+      "failed_drafts": 0,
+      "gate": [
+        {
+          "check": "scope_rule",
+          "passed": true,
+          "detail": "범위 밖 신호 없음"
+        },
+        {
+          "check": "term_coverage",
+          "passed": true,
+          "detail": "질문 용어가 모두 근거에 있음"
+        },
+        {
+          "check": "llm_gate",
+          "passed": true,
+          "detail": "IT-03 섹션에 VPN 접속 불가 시 확인해야 할 사항(OTP 앱 시간 동기화 등)과 해결되지 않을 경우 헬프데스크에 문의하라는 절차가 명시되어 있다."
+        }
+      ],
+      "verification": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "출처 표시",
+            "passed": true,
+            "detail": "모든 문단에 근거 표기 있음"
+          },
+          {
+            "name": "인용 범위",
+            "passed": true,
+            "detail": "인용 ['IT-03']"
+          },
+          {
+            "name": "카테고리 일치",
+            "passed": true,
+            "detail": "인용 섹션이 모두 C1 매핑 안에 있음"
+          },
+          {
+            "name": "계산 검증",
+            "passed": true,
+            "detail": "계산식이 모두 맞음(또는 계산식 없음)"
+          },
+          {
+            "name": "수치 근거",
+            "passed": true,
+            "detail": "모든 수치가 근거·질문·검증된 계산에 있음"
+          },
+          {
+            "name": "용어 근거",
+            "passed": true,
+            "detail": "답변의 제도 용어가 모두 근거에 있음"
+          },
+          {
+            "name": "임의 약속 금지",
+            "passed": true,
+            "detail": "규정 밖 약속·예외 승인 표현 없음"
+          }
+        ]
+      },
+      "answer": "VPN 접속이 되지 않을 경우, 다음 사항을 순서대로 확인해 주시기 바랍니다 [IT-03].\n1. 인터넷 연결 [IT-03]\n2. OTP 앱 시간 동기화 [IT-03]\n3. 비밀번호 만료 여부 [IT-03]\n위 사항을 확인한 후에도 문제가 해결되지 않으면 헬프데스크에 문의해 주세요 [IT-03].",
+      "citations": [
+        {
+          "id": "IT-03",
+          "title": "VPN과 재택 접속",
+          "doc": "IT 지원 규정·가이드",
+          "source": "새솔컴퍼니 정보보안규정 제18조",
+          "version": "새솔컴퍼니 IT지원 가이드 v1.0 (2026-11-04 시행)"
+        }
+      ],
+      "diagnosis": []
+    },
+    {
+      "id": "HO2",
+      "question": "퇴사자 메일 계정은 언제 삭제돼요?",
+      "expected_category": [
+        "C1"
+      ],
+      "category": "C1",
+      "confidence": 0.9,
+      "probabilities": null,
+      "category_ok": 1,
+      "expected_tools": [
+        "lookup_it"
+      ],
+      "tools_called": [
+        "lookup_it"
+      ],
+      "tool_score": 1,
+      "expected_outcome": "answer",
+      "outcome": "answer",
+      "outcome_ok": 1,
+      "evidence": [
+        "IT-07"
+      ],
+      "sections": [
+        "IT-07"
+      ],
+      "retrieval_ok": 1,
+      "answer_score": 1,
+      "missing": [],
+      "violations": [],
+      "unsupported": 0,
+      "failed_drafts": 0,
+      "gate": [
+        {
+          "check": "scope_rule",
+          "passed": true,
+          "detail": "범위 밖 신호 없음"
+        },
+        {
+          "check": "term_coverage",
+          "passed": true,
+          "detail": "질문 용어가 모두 근거에 있음"
+        },
+        {
+          "check": "llm_gate",
+          "passed": true,
+          "detail": "IT-07에 퇴사자 메일 계정의 비활성화 시점과 30일 보관 후 삭제된다는 규정이 명시되어 있다."
+        }
+      ],
+      "verification": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "출처 표시",
+            "passed": true,
+            "detail": "모든 문단에 근거 표기 있음"
+          },
+          {
+            "name": "인용 범위",
+            "passed": true,
+            "detail": "인용 ['IT-07']"
+          },
+          {
+            "name": "카테고리 일치",
+            "passed": true,
+            "detail": "인용 섹션이 모두 C1 매핑 안에 있음"
+          },
+          {
+            "name": "계산 검증",
+            "passed": true,
+            "detail": "계산식이 모두 맞음(또는 계산식 없음)"
+          },
+          {
+            "name": "수치 근거",
+            "passed": true,
+            "detail": "모든 수치가 근거·질문·검증된 계산에 있음"
+          },
+          {
+            "name": "용어 근거",
+            "passed": true,
+            "detail": "답변의 제도 용어가 모두 근거에 있음"
+          },
+          {
+            "name": "임의 약속 금지",
+            "passed": true,
+            "detail": "규정 밖 약속·예외 승인 표현 없음"
+          }
+        ]
+      },
+      "answer": "퇴사자의 메일 계정은 퇴사일 다음 날 비활성화됩니다 [IT-07]. 이후 30일 동안 보관한 뒤 삭제됩니다 [IT-07].",
+      "citations": [
+        {
+          "id": "IT-07",
+          "title": "이메일과 메신저",
+          "doc": "IT 지원 규정·가이드",
+          "source": "새솔컴퍼니 정보시스템 운영규정 제11조",
+          "version": "새솔컴퍼니 IT지원 가이드 v1.0 (2026-11-04 시행)"
+        }
+      ],
+      "diagnosis": []
+    },
+    {
+      "id": "HO3",
+      "question": "코어타임이 몇 시부터 몇 시까지예요?",
+      "expected_category": [
+        "C2"
+      ],
+      "category": "C2",
+      "confidence": 0.95,
+      "probabilities": null,
+      "category_ok": 1,
+      "expected_tools": [
+        "lookup_hr"
+      ],
+      "tools_called": [
+        "lookup_hr"
+      ],
+      "tool_score": 1,
+      "expected_outcome": "answer",
+      "outcome": "answer",
+      "outcome_ok": 1,
+      "evidence": [
+        "HR-01"
+      ],
+      "sections": [
+        "HR-01"
+      ],
+      "retrieval_ok": 1,
+      "answer_score": 1,
+      "missing": [],
+      "violations": [],
+      "unsupported": 0,
+      "failed_drafts": 0,
+      "gate": [
+        {
+          "check": "scope_rule",
+          "passed": true,
+          "detail": "범위 밖 신호 없음"
+        },
+        {
+          "check": "term_coverage",
+          "passed": true,
+          "detail": "질문 용어가 모두 근거에 있음"
+        },
+        {
+          "check": "llm_gate",
+          "passed": true,
+          "detail": "HR-01에 코어타임이 10:00~16:00라고 명시되어 있다."
+        }
+      ],
+      "verification": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "출처 표시",
+            "passed": true,
+            "detail": "모든 문단에 근거 표기 있음"
+          },
+          {
+            "name": "인용 범위",
+            "passed": true,
+            "detail": "인용 ['HR-01']"
+          },
+          {
+            "name": "카테고리 일치",
+            "passed": true,
+            "detail": "인용 섹션이 모두 C2 매핑 안에 있음"
+          },
+          {
+            "name": "계산 검증",
+            "passed": true,
+            "detail": "계산식이 모두 맞음(또는 계산식 없음)"
+          },
+          {
+            "name": "수치 근거",
+            "passed": true,
+            "detail": "모든 수치가 근거·질문·검증된 계산에 있음"
+          },
+          {
+            "name": "용어 근거",
+            "passed": true,
+            "detail": "답변의 제도 용어가 모두 근거에 있음"
+          },
+          {
+            "name": "임의 약속 금지",
+            "passed": true,
+            "detail": "규정 밖 약속·예외 승인 표현 없음"
+          }
+        ]
+      },
+      "answer": "코어타임은 10:00부터 16:00까지입니다 [HR-01]. 코어타임에는 모든 직원이 근무해야 합니다 [HR-01].",
+      "citations": [
+        {
+          "id": "HR-01",
+          "title": "근무시간과 시차출퇴근",
+          "doc": "인사·복무 규정",
+          "source": "근로기준법 제50조; 새솔컴퍼니 취업규칙 제20조",
+          "version": "새솔컴퍼니 취업규칙·복무지침 v3.2 (2026-11-04 시행)"
+        }
+      ],
+      "diagnosis": []
+    },
+    {
+      "id": "HO4",
+      "question": "부모님이 돌아가시면 휴가를 며칠 받아요?",
+      "expected_category": [
+        "C2"
+      ],
+      "category": "C2",
+      "confidence": 0.95,
+      "probabilities": null,
+      "category_ok": 1,
+      "expected_tools": [
+        "lookup_hr"
+      ],
+      "tools_called": [
+        "lookup_hr"
+      ],
+      "tool_score": 1,
+      "expected_outcome": "answer",
+      "outcome": "answer",
+      "outcome_ok": 1,
+      "evidence": [
+        "HR-05"
+      ],
+      "sections": [
+        "HR-05"
+      ],
+      "retrieval_ok": 1,
+      "answer_score": 1,
+      "missing": [],
+      "violations": [],
+      "unsupported": 0,
+      "failed_drafts": 0,
+      "gate": [
+        {
+          "check": "scope_rule",
+          "passed": true,
+          "detail": "범위 밖 신호 없음"
+        },
+        {
+          "check": "term_coverage",
+          "passed": true,
+          "detail": "질문 용어가 모두 근거에 있음"
+        },
+        {
+          "check": "llm_gate",
+          "passed": true,
+          "detail": "HR-05에 부모 사망 시 휴가 5일을 부여한다는 규정이 명시되어 있다."
+        }
+      ],
+      "verification": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "출처 표시",
+            "passed": true,
+            "detail": "모든 문단에 근거 표기 있음"
+          },
+          {
+            "name": "인용 범위",
+            "passed": true,
+            "detail": "인용 ['HR-05']"
+          },
+          {
+            "name": "카테고리 일치",
+            "passed": true,
+            "detail": "인용 섹션이 모두 C2 매핑 안에 있음"
+          },
+          {
+            "name": "계산 검증",
+            "passed": true,
+            "detail": "계산식이 모두 맞음(또는 계산식 없음)"
+          },
+          {
+            "name": "수치 근거",
+            "passed": true,
+            "detail": "모든 수치가 근거·질문·검증된 계산에 있음"
+          },
+          {
+            "name": "용어 근거",
+            "passed": true,
+            "detail": "답변의 제도 용어가 모두 근거에 있음"
+          },
+          {
+            "name": "임의 약속 금지",
+            "passed": true,
+            "detail": "규정 밖 약속·예외 승인 표현 없음"
+          }
+        ]
+      },
+      "answer": "부모님 사망 시 경조휴가는 5일이 부여됩니다 [HR-05]. 해당 휴가는 연차와 별도로 지급되는 유급휴가이며, 휴일을 포함하지 않는 영업일 기준으로 계산합니다 [HR-05]. 경조휴가는 사유 발생일로부터 30일 안에 사용해야 합니다 [HR-05]. 신청은 인사시스템에서 가능하며, 부고 등 증빙 서류를 첨부해 주시기 바랍니다 [HR-05].",
+      "citations": [
+        {
+          "id": "HR-05",
+          "title": "경조휴가와 경조금",
+          "doc": "인사·복무 규정",
+          "source": "새솔컴퍼니 복리후생규정 제5조",
+          "version": "새솔컴퍼니 취업규칙·복무지침 v3.2 (2026-11-04 시행)"
+        }
+      ],
+      "diagnosis": []
+    },
+    {
+      "id": "HO5",
+      "question": "화장실에 물이 새요",
+      "expected_category": [
+        "C3"
+      ],
+      "category": "C3",
+      "confidence": 0.95,
+      "probabilities": null,
+      "category_ok": 1,
+      "expected_tools": [
+        "lookup_ga"
+      ],
+      "tools_called": [
+        "lookup_ga"
+      ],
+      "tool_score": 1,
+      "expected_outcome": "answer",
+      "outcome": "answer",
+      "outcome_ok": 1,
+      "evidence": [
+        "GA-07"
+      ],
+      "sections": [
+        "GA-07"
+      ],
+      "retrieval_ok": 1,
+      "answer_score": 1,
+      "missing": [],
+      "violations": [],
+      "unsupported": 0,
+      "failed_drafts": 0,
+      "gate": [
+        {
+          "check": "scope_rule",
+          "passed": true,
+          "detail": "범위 밖 신호 없음"
+        },
+        {
+          "check": "term_coverage",
+          "passed": true,
+          "detail": "질문 용어가 모두 근거에 있음"
+        },
+        {
+          "check": "llm_gate",
+          "passed": true,
+          "detail": "GA-07에 화장실 고장 및 누수 발생 시 사내 포털이나 총무팀(내선 1300)으로 신고해야 한다는 절차가 명시되어 있다."
+        }
+      ],
+      "verification": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "출처 표시",
+            "passed": true,
+            "detail": "모든 문단에 근거 표기 있음"
+          },
+          {
+            "name": "인용 범위",
+            "passed": true,
+            "detail": "인용 ['GA-07']"
+          },
+          {
+            "name": "카테고리 일치",
+            "passed": true,
+            "detail": "인용 섹션이 모두 C3 매핑 안에 있음"
+          },
+          {
+            "name": "계산 검증",
+            "passed": true,
+            "detail": "계산식이 모두 맞음(또는 계산식 없음)"
+          },
+          {
+            "name": "수치 근거",
+            "passed": true,
+            "detail": "모든 수치가 근거·질문·검증된 계산에 있음"
+          },
+          {
+            "name": "용어 근거",
+            "passed": true,
+            "detail": "답변의 제도 용어가 모두 근거에 있음"
+          },
+          {
+            "name": "임의 약속 금지",
+            "passed": true,
+            "detail": "규정 밖 약속·예외 승인 표현 없음"
+          }
+        ]
+      },
+      "answer": "누수와 같은 긴급한 시설 고장은 즉시 전화로 신고해야 합니다 [GA-07]. 화장실 시설 고장은 사내 포털의 '시설 신고'나 총무팀(내선 1300)으로 신고할 수 있습니다 [GA-07].",
+      "citations": [
+        {
+          "id": "GA-07",
+          "title": "시설 고장 신고",
+          "doc": "총무 업무 가이드",
+          "source": "새솔컴퍼니 총무 업무 가이드 7장",
+          "version": "새솔컴퍼니 총무 업무 가이드 v2.0 (2026-11-04 시행)"
+        }
+      ],
+      "diagnosis": []
+    },
+    {
+      "id": "HO6",
+      "question": "해외 출장 숙박비 상한이 얼마예요?",
+      "expected_category": [
+        "C4"
+      ],
+      "category": "C4",
+      "confidence": 1.0,
+      "probabilities": null,
+      "category_ok": 1,
+      "expected_tools": [
+        "lookup_expense"
+      ],
+      "tools_called": [
+        "lookup_expense"
+      ],
+      "tool_score": 1,
+      "expected_outcome": "answer",
+      "outcome": "answer",
+      "outcome_ok": 1,
+      "evidence": [
+        "EX-06"
+      ],
+      "sections": [
+        "EX-06"
+      ],
+      "retrieval_ok": 1,
+      "answer_score": 1,
+      "missing": [],
+      "violations": [],
+      "unsupported": 0,
+      "failed_drafts": 0,
+      "gate": [
+        {
+          "check": "scope_rule",
+          "passed": true,
+          "detail": "범위 밖 신호 없음"
+        },
+        {
+          "check": "term_coverage",
+          "passed": true,
+          "detail": "질문 용어가 모두 근거에 있음"
+        },
+        {
+          "check": "llm_gate",
+          "passed": true,
+          "detail": "EX-06에 해외 출장 숙박비 상한이 1박 미화 200달러라고 명시되어 있다."
+        }
+      ],
+      "verification": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "출처 표시",
+            "passed": true,
+            "detail": "모든 문단에 근거 표기 있음"
+          },
+          {
+            "name": "인용 범위",
+            "passed": true,
+            "detail": "인용 ['EX-06']"
+          },
+          {
+            "name": "카테고리 일치",
+            "passed": true,
+            "detail": "인용 섹션이 모두 C4 매핑 안에 있음"
+          },
+          {
+            "name": "계산 검증",
+            "passed": true,
+            "detail": "계산식이 모두 맞음(또는 계산식 없음)"
+          },
+          {
+            "name": "수치 근거",
+            "passed": true,
+            "detail": "모든 수치가 근거·질문·검증된 계산에 있음"
+          },
+          {
+            "name": "용어 근거",
+            "passed": true,
+            "detail": "답변의 제도 용어가 모두 근거에 있음"
+          },
+          {
+            "name": "임의 약속 금지",
+            "passed": true,
+            "detail": "규정 밖 약속·예외 승인 표현 없음"
+          }
+        ]
+      },
+      "answer": "해외 출장 숙박비 상한은 1박 실비로 정산하되 미화 200달러입니다 [EX-06]. 해외 출장은 본부장의 사전 승인을 받아야 합니다 [EX-06].",
+      "citations": [
+        {
+          "id": "EX-06",
+          "title": "해외 출장비",
+          "doc": "경비 지침",
+          "source": "새솔컴퍼니 출장비 규정 제10조",
+          "version": "새솔컴퍼니 경비 지침 v4.1 (2026-11-04 시행)"
+        }
+      ],
+      "diagnosis": []
+    },
+    {
+      "id": "HO7",
+      "question": "개인카드로 결제한 경비는 언제 돌려받아요?",
+      "expected_category": [
+        "C4"
+      ],
+      "category": "C4",
+      "confidence": 0.95,
+      "probabilities": null,
+      "category_ok": 1,
+      "expected_tools": [
+        "lookup_expense"
+      ],
+      "tools_called": [
+        "lookup_expense"
+      ],
+      "tool_score": 1,
+      "expected_outcome": "answer",
+      "outcome": "answer",
+      "outcome_ok": 1,
+      "evidence": [
+        "EX-09"
+      ],
+      "sections": [
+        "EX-09"
+      ],
+      "retrieval_ok": 1,
+      "answer_score": 1,
+      "missing": [],
+      "violations": [],
+      "unsupported": 0,
+      "failed_drafts": 0,
+      "gate": [
+        {
+          "check": "scope_rule",
+          "passed": true,
+          "detail": "범위 밖 신호 없음"
+        },
+        {
+          "check": "term_coverage",
+          "passed": true,
+          "detail": "질문 용어가 모두 근거에 있음"
+        },
+        {
+          "check": "llm_gate",
+          "passed": true,
+          "detail": "EX-09에 개인카드로 결제하여 승인된 금액은 다음 급여일에 급여와 함께 지급된다는 내용이 명시되어 있다."
+        }
+      ],
+      "verification": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "출처 표시",
+            "passed": true,
+            "detail": "모든 문단에 근거 표기 있음"
+          },
+          {
+            "name": "인용 범위",
+            "passed": true,
+            "detail": "인용 ['EX-09']"
+          },
+          {
+            "name": "카테고리 일치",
+            "passed": true,
+            "detail": "인용 섹션이 모두 C4 매핑 안에 있음"
+          },
+          {
+            "name": "계산 검증",
+            "passed": true,
+            "detail": "계산식이 모두 맞음(또는 계산식 없음)"
+          },
+          {
+            "name": "수치 근거",
+            "passed": true,
+            "detail": "모든 수치가 근거·질문·검증된 계산에 있음"
+          },
+          {
+            "name": "용어 근거",
+            "passed": true,
+            "detail": "답변의 제도 용어가 모두 근거에 있음"
+          },
+          {
+            "name": "임의 약속 금지",
+            "passed": true,
+            "detail": "규정 밖 약속·예외 승인 표현 없음"
+          }
+        ]
+      },
+      "answer": "법인카드가 없거나 쓸 수 없는 상황에서는 개인카드로 결제한 뒤 정산할 수 있습니다 [EX-09]. 승인된 금액은 다음 급여일에 급여와 함께 지급됩니다 [EX-09]. 정산 시에는 증빙이 필요합니다 [EX-09].",
+      "citations": [
+        {
+          "id": "EX-09",
+          "title": "개인카드 사용과 정산 반려",
+          "doc": "경비 지침",
+          "source": "새솔컴퍼니 경비 지침 제16조",
+          "version": "새솔컴퍼니 경비 지침 v4.1 (2026-11-04 시행)"
+        }
+      ],
+      "diagnosis": []
+    },
+    {
+      "id": "HO8",
+      "question": "인사팀장님 휴대폰 번호 알려 주세요",
+      "expected_category": [
+        "C0",
+        "C2"
+      ],
+      "category": "C0",
+      "confidence": 1.0,
+      "probabilities": null,
+      "category_ok": 1,
+      "expected_tools": [
+        "abstain"
+      ],
+      "tools_called": [
+        "abstain"
+      ],
+      "tool_score": 1,
+      "expected_outcome": "abstain",
+      "outcome": "abstain",
+      "outcome_ok": 1,
+      "evidence": [],
+      "sections": [],
+      "retrieval_ok": null,
+      "answer_score": 1,
+      "missing": [],
+      "violations": [],
+      "unsupported": 0,
+      "failed_drafts": 0,
+      "gate": [
+        {
+          "check": "category",
+          "passed": false,
+          "detail": "C0(범위 밖)"
+        }
+      ],
+      "verification": null,
+      "answer": "[담당자 연결] 사내 규정만으로는 답할 수 없어 담당 부서로 안내합니다.\n사유: 사내 헬프데스크가 다루지 않는 범위 밖 문의입니다.\n문의처: 해당 문의는 사내 헬프데스크가 답할 수 없습니다. 업무 관련이면 소속 팀장에게 문의해 주세요",
+      "citations": [],
+      "diagnosis": []
+    },
+    {
+      "id": "HO9",
+      "question": "안식휴가는 몇 년 근무하면 생겨요?",
+      "expected_category": [
+        "C2"
+      ],
+      "category": "C2",
+      "confidence": 0.95,
+      "probabilities": null,
+      "category_ok": 1,
+      "expected_tools": [
+        "abstain"
+      ],
+      "tools_called": [
+        "abstain"
+      ],
+      "tool_score": 1,
+      "expected_outcome": "abstain",
+      "outcome": "abstain",
+      "outcome_ok": 1,
+      "evidence": [],
+      "sections": [
+        "HR-05",
+        "HR-07",
+        "HR-03",
+        "HR-06"
+      ],
+      "retrieval_ok": null,
+      "answer_score": 1,
+      "missing": [],
+      "violations": [],
+      "unsupported": 0,
+      "failed_drafts": 0,
+      "gate": [
+        {
+          "check": "scope_rule",
+          "passed": true,
+          "detail": "범위 밖 신호 없음"
+        },
+        {
+          "check": "term_coverage",
+          "passed": false,
+          "detail": "근거에 없는 용어: 안식휴가"
+        }
+      ],
+      "verification": null,
+      "answer": "[담당자 연결] 사내 규정만으로는 답할 수 없어 담당 부서로 안내합니다.\n사유: 질문의 핵심 용어(안식휴가)를 다루는 근거가 없습니다.\n문의처: 인사팀(내선 1200, 인사시스템 문의하기)",
+      "citations": [],
+      "diagnosis": []
+    },
+    {
+      "id": "HO10",
+      "question": "모니터 하나 더 받을 수 있어요?",
+      "expected_category": [
+        "C1"
+      ],
+      "category": "C1",
+      "confidence": 0.95,
+      "probabilities": null,
+      "category_ok": 1,
+      "expected_tools": [
+        "lookup_it"
+      ],
+      "tools_called": [
+        "lookup_it"
+      ],
+      "tool_score": 1,
+      "expected_outcome": "answer",
+      "outcome": "answer",
+      "outcome_ok": 1,
+      "evidence": [
+        "IT-04"
+      ],
+      "sections": [
+        "IT-04"
+      ],
+      "retrieval_ok": 1,
+      "answer_score": 1,
+      "missing": [],
+      "violations": [],
+      "unsupported": 0,
+      "failed_drafts": 0,
+      "gate": [
+        {
+          "check": "scope_rule",
+          "passed": true,
+          "detail": "범위 밖 신호 없음"
+        },
+        {
+          "check": "term_coverage",
+          "passed": true,
+          "detail": "질문 용어가 모두 근거에 있음"
+        },
+        {
+          "check": "llm_gate",
+          "passed": true,
+          "detail": "IT-04 섹션에 추가 모니터 신청을 위해 팀장 승인을 받아 'IT 요청'으로 신청해야 한다는 절차가 명시되어 있다."
+        }
+      ],
+      "verification": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "출처 표시",
+            "passed": true,
+            "detail": "모든 문단에 근거 표기 있음"
+          },
+          {
+            "name": "인용 범위",
+            "passed": true,
+            "detail": "인용 ['IT-04']"
+          },
+          {
+            "name": "카테고리 일치",
+            "passed": true,
+            "detail": "인용 섹션이 모두 C1 매핑 안에 있음"
+          },
+          {
+            "name": "계산 검증",
+            "passed": true,
+            "detail": "계산식이 모두 맞음(또는 계산식 없음)"
+          },
+          {
+            "name": "수치 근거",
+            "passed": true,
+            "detail": "모든 수치가 근거·질문·검증된 계산에 있음"
+          },
+          {
+            "name": "용어 근거",
+            "passed": true,
+            "detail": "답변의 제도 용어가 모두 근거에 있음"
+          },
+          {
+            "name": "임의 약속 금지",
+            "passed": true,
+            "detail": "규정 밖 약속·예외 승인 표현 없음"
+          }
+        ]
+      },
+      "answer": "추가 모니터는 팀장 승인을 받아야 합니다 [IT-04]. 승인을 받은 후 'IT 요청'으로 신청해 주시기 바랍니다 [IT-04].",
+      "citations": [
+        {
+          "id": "IT-04",
+          "title": "업무용 장비 지급과 교체",
+          "doc": "IT 지원 규정·가이드",
+          "source": "새솔컴퍼니 자산관리규정 제7조",
+          "version": "새솔컴퍼니 IT지원 가이드 v1.0 (2026-11-04 시행)"
+        }
+      ],
+      "diagnosis": []
+    }
+  ]
+}

@@ -114,7 +114,9 @@ def verify(answer: str, sections: list[Section], question: str, category: str | 
     checks.append({
         "name": "출처 표시",
         "passed": not uncited and bool(CITE_RE.search(answer)),
-        "detail": "모든 문단에 근거 표기 있음" if not uncited else f"근거 표기 없는 문단 {len(uncited)}개: " + " / ".join(u[:40] for u in uncited),
+        "detail": ("근거 표기가 하나도 없음" if not CITE_RE.search(answer) else
+                   "모든 문단에 근거 표기 있음" if not uncited else
+                   f"근거 표기 없는 문단 {len(uncited)}개: " + " / ".join(u[:40] for u in uncited)),
     })
 
     # 2. 인용 범위: 인용한 섹션이 이번에 조립한 근거 안에 있는가

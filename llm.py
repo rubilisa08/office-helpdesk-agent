@@ -109,7 +109,19 @@ class LLM:
         raise RuntimeError("unreachable")
 
     def json(self, system: str, user: str) -> dict:
-        return _parse_json(self.complete(system, user, as_json=True))
+        try:
+            return _parse_json(self.complete(system, user, as_json=True))
+        except ValueError:
+            # 빈 응답이나 깨진 JSON이 캐시에 남지 않도록 지우고, 지시를 본문에 합쳐 한 번 더 묻는다
+            key = hashlib.sha256(json.dumps([self.provider, self.model, system, user, True]).encode()).hexdigest()
+            (CACHE_DIR / f"{key}.json").unlink(missing_ok=True)
+            text = self._call(system, user, True, inline=self.provider == "gemini")
+            self.api_calls += 1
+            out = _parse_json(text)  # 두 번째도 실패하면 예외를 그대로 올린다
+            CACHE_DIR.mkdir(exist_ok=True)
+            (CACHE_DIR / f"{key}.json").write_text(json.dumps({"model": self.model, "text": text}, ensure_ascii=False),
+                                                   encoding="utf-8")
+            return out
 
     def _call(self, system: str, user: str, as_json: bool, inline: bool = False) -> str:
         if self.provider == "gemini":
@@ -118,7 +130,9 @@ class LLM:
             config = types.GenerateContentConfig(
                 system_instruction=None if inline else system,
                 temperature=0,
-                response_mime_type="application/json" if as_json else "text/plain",
+                max_output_tokens=1024,  # Gemma가 같은 말을 반복하다 504로 끝나는 것을 막는다(답변은 2~6문장)
+                # Gemma는 JSON 모드에서 가끔 빈 응답을 낸다. Gemma는 일반 텍스트로 받아 JSON 부분을 꺼낸다(_parse_json)
+                response_mime_type="application/json" if as_json and not self.model.startswith("gemma") else "text/plain",
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             )
             resp = self._client.models.generate_content(

@@ -196,7 +196,7 @@ def run_eval(args) -> None:
     judge = agent.llm if grader == "llm" else None
     items = load_items(args.ids, args.data)
 
-    records = []
+    records, skipped = [], []
     for it in items:
         try:
             out = agent.run(it["question"])
@@ -206,6 +206,10 @@ def run_eval(args) -> None:
             print(f"\n⏸ {e}\n{len(records)}/{len(items)}문항까지 진행. 같은 명령을 다시 실행하면 이어서 합니다 "
                   f"(API 호출 {agent.llm.api_calls}회, 캐시 {agent.llm.cache_hits}회).")
             return
+        except Exception as e:  # 무료 모델의 일시적 서버 오류: 건너뛰고 계속한다. 다시 실행하면 캐시로 이어진다
+            skipped.append(it["id"])
+            print(f"{it['id']} ⚠ 서버 오류로 건너뜀: {str(e)[:80]}")
+            continue
         tool_ok = int(sorted(out["tools_called"]) == sorted(it["expected_tools"]))
         exp_out, got_out = expected_outcome(it), outcome(out["answer"])
         used = [s.id for s in out.get("sections") or []]
@@ -229,6 +233,11 @@ def run_eval(args) -> None:
         print(f"{it['id']} 도구 {'○' if tool_ok else '×'} 답변 {'○' if grade['score'] else '×'}  "
               f"[{out['category']} {out.get('confidence', 0):.2f}] {out['tools_called']}")
 
+    if skipped:
+        # 일부 문항이 빠진 결과는 기록하지 않는다. 같은 명령을 다시 실행하면 성공한 호출은 캐시로 건너뛴다
+        print(f"\n⚠ 서버 오류로 {len(skipped)}문항을 건너뛰었습니다: {skipped}. 같은 명령을 다시 실행하세요 "
+              f"(LLM 호출 {agent.llm.api_calls}회, 캐시 {agent.llm.cache_hits}회).")
+        return
     n = len(records)
     answerable = [r for r in records if r["expected_outcome"] == "answer"]
     answered = [r for r in records if r["outcome"] == "answer"]
