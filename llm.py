@@ -51,12 +51,17 @@ class LLM:
         self.provider = provider or resolve_provider()
         self.api_calls = 0   # 실제 API 호출 수
         self.cache_hits = 0  # 캐시에서 꺼낸 수
+        self.fallback = None  # 주 모델이 실패할 때만 쓰는 대체 모델
+        self.fallback_calls = 0
         if self.provider == "gemini":
             from google import genai
             from google.genai import types
 
             # 최신 3.7·3.8 Flash는 과부하(503)가 잦고, flash-lite는 같은 입력에 분류가 흔들려서 3.5 Flash를 기본으로 쓴다.
             self.model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+            # 무료 Gemma는 가끔 빈 응답·500 오류를 낸다. 그때만 대체 모델로 다시 묻는다(GEMINI_FALLBACK_MODEL=none이면 끔)
+            fb = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.1-flash-lite").strip()
+            self.fallback = None if fb.lower() in ("", "none") or fb == self.model else fb
             self._client = genai.Client(
                 api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"),
                 # SDK 내부 재시도는 끄고(한 호출이 몇 분씩 걸림) 아래 complete()에서 직접 재시도한다
@@ -93,19 +98,38 @@ class LLM:
         return text
 
     def _call_with_retry(self, system: str, user: str, as_json: bool) -> str:
+        try:
+            text = self._retry_loop(system, user, as_json, self.model)
+            if text.strip() or not self.fallback:
+                return text
+        except QuotaExhausted:
+            raise
+        except Exception:
+            if not self.fallback:
+                raise
+        # 주 모델(Gemma)이 계속 실패하거나 빈 응답만 내면 대체 모델로 한 번 더 묻는다
+        self.fallback_calls += 1
+        return self._retry_loop(system, user, as_json, self.fallback)
+
+    def _retry_loop(self, system: str, user: str, as_json: bool, model: str) -> str:
         inline = False
-        for attempt in range(4):
+        for attempt in range(3):
             try:
-                return self._call(system, user, as_json, inline)
+                text = self._call(system, user, as_json, inline, model)
+                if text.strip() or attempt == 2:
+                    return text
+                # Gemma는 가끔 빈 응답을 낸다. 지시를 본문에 합쳐 다시 묻는다
+                inline = self.provider == "gemini"
+                continue
             except Exception as e:  # 429·일시 장애는 잠깐 쉬고 재시도
                 if re.search(r"PerDay|per day", str(e)):  # 하루 한도 초과는 기다려도 소용없다
-                    raise QuotaExhausted(f"{self.model} 하루 무료 호출 한도를 다 썼습니다. 내일 다시 하거나 결제를 등록하세요.") from e
-                if attempt == 3 or not re.search(r"429|500|503|504|rate|quota|unavailable|internal|deadline|timed? ?out", str(e), re.I):
+                    raise QuotaExhausted(f"{model} 하루 무료 호출 한도를 다 썼습니다. 내일 다시 하거나 결제를 등록하세요.") from e
+                if attempt == 2 or not re.search(r"429|500|503|504|rate|quota|unavailable|internal|deadline|timed? ?out", str(e), re.I):
                     raise
                 # Gemma는 일부 입력에서 system_instruction으로 보내면 500/504로 멈춘다. 지시를 본문에 합쳐 다시 보낸다.
                 if self.provider == "gemini" and re.search(r"500|504|internal|deadline", str(e), re.I):
                     inline = True
-                time.sleep(2 ** attempt * 5)
+                time.sleep(2 ** attempt * 3)
         raise RuntimeError("unreachable")
 
     def json(self, system: str, user: str) -> dict:
@@ -123,7 +147,8 @@ class LLM:
                                                    encoding="utf-8")
             return out
 
-    def _call(self, system: str, user: str, as_json: bool, inline: bool = False) -> str:
+    def _call(self, system: str, user: str, as_json: bool, inline: bool = False, model: str | None = None) -> str:
+        model = model or self.model
         if self.provider == "gemini":
             from google.genai import types
 
@@ -132,11 +157,11 @@ class LLM:
                 temperature=0,
                 max_output_tokens=1024,  # Gemma가 같은 말을 반복하다 504로 끝나는 것을 막는다(답변은 2~6문장)
                 # Gemma는 JSON 모드에서 가끔 빈 응답을 낸다. Gemma는 일반 텍스트로 받아 JSON 부분을 꺼낸다(_parse_json)
-                response_mime_type="application/json" if as_json and not self.model.startswith("gemma") else "text/plain",
+                response_mime_type="application/json" if as_json and not model.startswith("gemma") else "text/plain",
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             )
             resp = self._client.models.generate_content(
-                model=self.model, contents=f"{system}\n\n{user}" if inline else user, config=config
+                model=model, contents=f"{system}\n\n{user}" if inline else user, config=config
             )
             return resp.text or ""
         kwargs = {"response_format": {"type": "json_object"}} if as_json else {}

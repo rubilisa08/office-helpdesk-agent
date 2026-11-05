@@ -22,6 +22,7 @@ MAX_ANSWER_ATTEMPTS = 2
 
 class AgentState(TypedDict, total=False):
     question: str
+    chosen_category: str         # 되묻기에 사용자가 고른 분야(있으면 ① 판정을 대신한다)
     category: str                # ① 판정 결과
     confidence: float            # ① 판정 신뢰도(0~1)
     alternative: str | None      # ① 두 번째 후보 카테고리
@@ -106,6 +107,11 @@ def build_graph(llm: LLM, settings: Settings, jev=None):
 
     def classify(state: AgentState) -> AgentState:
         q = state["question"]
+        chosen = state.get("chosen_category")
+        if chosen in CATEGORIES:  # 되묻기에 사용자가 분야를 골라 답한 경우: 판정 대신 그 선택을 따른다
+            return {"category": chosen, "confidence": 1.0, "alternative": None, "evidence_types": [],
+                    "category_reason": "되묻기에 사용자가 이 분야를 선택했습니다.", "probabilities": None,
+                    "trace": state.get("trace", []) + [f"① 판정: 사용자가 {chosen} 선택"]}
         if use_jev:
             out = jev_classify(jev, q)
         elif llm.online:
@@ -227,8 +233,12 @@ class Agent:
                 raise RuntimeError("decider=jev인데 .env에 Jev 키·주소가 없습니다(JEV_API_KEY, 또는 LAYA_API_KEY + LAYA_BASE_URL).")
         self.graph = build_graph(self.llm, self.settings, self.jev)
 
-    def run(self, question: str) -> AgentState:
-        return self.graph.invoke({"question": question, "trace": []})
+    def run(self, question: str, chosen_category: str | None = None) -> AgentState:
+        """chosen_category: 되묻기 후 사용자가 고른 분야. 주면 ① 판정을 건너뛰고 그 분야로 근거를 찾는다."""
+        state = {"question": question, "trace": []}
+        if chosen_category:
+            state["chosen_category"] = chosen_category
+        return self.graph.invoke(state)
 
 
 if __name__ == "__main__":

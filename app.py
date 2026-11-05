@@ -136,7 +136,10 @@ with st.sidebar:
     st.caption("예시 질문")
     for ex in EXAMPLES:
         if st.button(ex, width="stretch"):
-            st.session_state["q"] = ex
+            st.session_state["pending"] = {"q": ex, "cat": None}
+    st.divider()
+    if st.button("새 대화 시작", width="stretch"):
+        st.session_state["chat"] = []
 
 st.title("🏢 새솔컴퍼니 사내 헬프데스크")
 html_block('<div class="fr-sub">직원 문의를 IT지원·인사·총무·경비정산으로 분류하고 그 분야의 사내 규정에서만 답합니다. '
@@ -144,121 +147,172 @@ html_block('<div class="fr-sub">직원 문의를 IT지원·인사·총무·경�
 
 tab_ask, tab_eval, tab_map = st.tabs(["문의하기", "평가 결과", "카테고리·근거 매핑"])
 
+
+def render_summary(out: dict, conf: float) -> None:
+    """요약 카드 4개 + 답변 카드 + 출처."""
+    cat = CATEGORIES[out["category"]]
+    status_label, kind = STATUS[out["status"]]
+    ver = out.get("verification")
+    low = out["category"] != "C0" and out["confidence"] < conf
+    if not ver or out["status"] != "answered":
+        ver_value, ver_sub = pill("해당 없음", "muted"), "담당자 연결·되묻기는 검증하지 않음"
+    else:
+        n_ok = sum(c["passed"] for c in ver["checks"])
+        ver_value = pill("통과" if ver["passed"] else "실패", "ok" if ver["passed"] else "bad")
+        ver_sub = f"검사 {len(ver['checks'])}개 중 {n_ok}개 통과 · 답변 {out.get('attempts', 0)}회 생성"
+    if out.get("chosen_category"):
+        conf_sub = "사용자가 직접 선택"
+    elif out["category"] == "C0":
+        conf_sub = f"임계값 {conf:.2f} → C0은 되묻지 않음"
+    else:
+        conf_sub = f"임계값 {conf:.2f} → " + ("되묻기" if low else "통과")
+    html_block('<div class="fr-kpis">'
+               + kpi("판정 카테고리", f"{out['category']} · {esc(cat['name'])}", esc(cat["en"]))
+               + kpi("판정 신뢰도", f"{out['confidence']:.2f}", conf_sub)
+               + kpi("결과", pill(status_label, kind), "도구 " + esc(", ".join(out["tools_called"])))
+               + kpi("검증", ver_value, ver_sub)
+               + "</div>")
+    # 생성된 답변과 검색된 근거(출처)를 나눠서 보여 준다
+    html_block(f'<div class="fr-answer {kind}">{rich(out["answer"])}</div>')
+    if out["status"] == "answered" and out.get("citations"):
+        html_block('<div class="fr-h">출처</div>' + "".join(
+            f'<div class="fr-src"><span class="fr-cite">{c["id"]}</span> <b>{esc(c["title"])}</b> '
+            f'<span class="m">· {esc(c["doc"])} · {esc(c["source"])} · {esc(c["version"])}</span></div>'
+            for c in out["citations"]))
+
+
+def render_process(out: dict, conf: float) -> None:
+    """①~④ 단계별 처리 과정."""
+    cat = CATEGORIES[out["category"]]
+    ver = out.get("verification")
+    s1, s2 = st.columns(2, gap="medium")
+    with s1:
+        with st.container(border=True):
+            pct = out["confidence"] * 100
+            body = (f'<div class="fr-step"><span class="fr-num">1</span>카테고리 판정 · {out["category"]} {esc(cat["name"])}</div>'
+                    f'<div class="fr-bar"><div class="fill" style="width:{pct:.0f}%"></div>'
+                    f'<div class="mark" style="left:calc({conf * 100:.0f}% - 1px)" title="임계값"></div></div>'
+                    f'<div class="fr-scale"><span>신뢰도 {out["confidence"]:.2f}</span><span>│ 임계값 {conf:.2f}</span></div>')
+            if out.get("probabilities"):
+                body += '<div class="fr-note">Jev 카테고리 확률</div>' + "".join(
+                    f'<div class="fr-cand"><span>{k}</span><div class="fr-mini mini"><div class="fill" style="width:{p * 100:.0f}%"></div></div>'
+                    f'<span></span><span>{p:.2f}</span></div>' for k, p in out["probabilities"].items())
+            if out.get("alternative"):
+                alt = out["alternative"]
+                body += f'<div class="fr-note">두 번째 후보: {alt} {esc(CATEGORIES[alt]["name"])}</div>'
+            if out.get("evidence_types"):
+                body += '<div class="fr-note">필요한 근거 유형 ' + "".join(
+                    f'<span class="fr-chip">{esc(t)}</span>' for t in out["evidence_types"]) + "</div>"
+            if out.get("category_reason"):
+                body += f'<div class="fr-note">{esc(out["category_reason"])}</div>'
+            html_block(body)
+
+        with st.container(border=True):
+            body = f'<div class="fr-step"><span class="fr-num">2</span>근거 조립 · {esc(out.get("tool") or "조회 안 함")}</div>'
+            if out["status"] == "clarify":
+                body += '<div class="fr-note">신뢰도가 임계값보다 낮아 근거를 조회하지 않고 되물었습니다.</div>'
+            for g in out.get("gate", []):
+                mark = '<span class="o">✓</span>' if g["passed"] else '<span class="x">✕</span>'
+                body += f'<div class="fr-check">{mark} <b>{esc(g["check"])}</b> — {esc(g["detail"])}</div>'
+            cands = out.get("candidates") or []
+            if cands:
+                used = {s.id for s in out.get("sections") or []} if out["status"] == "answered" else set()
+                top = max(out["scores"].values(), default=1) or 1
+                secs = load_sections()
+                rows = []
+                for sid in cands:
+                    tag = pill("사용", "ok") if sid in used else f'{out["scores"][sid]:.2f}'
+                    rows.append(f'<div class="fr-cand{"" if sid in used else " dim"}"><span class="fr-cite">{sid}</span>'
+                                f'<span>{esc(secs[sid].title)}</span>'
+                                f'<div class="fr-mini mini"><div class="fill" style="width:{out["scores"][sid] / top * 100:.0f}%"></div></div>'
+                                f'<span>{tag}</span></div>')
+                body += f'<div class="fr-note" style="margin-top:8px">검색 후보 top_k={len(cands)} · 유사도 순</div>' + "".join(rows)
+            if out["status"] == "abstained":
+                body += f'<div class="fr-note">담당자 연결 사유: {esc(out.get("handoff_reason"))}</div>'
+            html_block(body)
+            if out["status"] == "answered":
+                for s in out.get("sections") or []:
+                    with st.expander(f"[{s.id}] {s.title} 원문 보기"):
+                        st.caption(f"{s.doc_title} · 출처: {s.source} · {s.version}")
+                        st.markdown(s.text)
+
+    with s2:
+        with st.container(border=True):
+            n = out.get("attempts", 0)
+            note = ("근거 섹션만 프롬프트에 넣고 문장마다 섹션 ID를 붙이게 합니다." if n else
+                    "담당자 연결·되묻기라 답변을 만들지 않았습니다.")
+            html_block(f'<div class="fr-step"><span class="fr-num">3</span>답변 생성 · {n}회</div><div class="fr-note">{note}</div>')
+            for i, d in enumerate(out.get("failed_drafts") or [], 1):
+                with st.expander(f"검증에서 걸러진 초안 {i}"):
+                    html_block(f'<div class="fr-note">{rich(d["answer"])}</div>'
+                               + "".join(f'<div class="fr-check"><span class="x">✕</span> {esc(p)}</div>' for p in d["problems"]))
+        with st.container(border=True):
+            body = '<div class="fr-step"><span class="fr-num">4</span>검증 · 기계적 검사</div>'
+            if ver and out["status"] == "answered":
+                for c in ver["checks"]:
+                    mark = '<span class="o">✓</span>' if c["passed"] else '<span class="x">✕</span>'
+                    body += f'<div class="fr-check">{mark} <b>{esc(c["name"])}</b> — {esc(c["detail"])}</div>'
+            else:
+                body += '<div class="fr-note">담당자 연결·되묻기는 답변을 만들지 않으므로 검증하지 않습니다.</div>'
+            html_block(body)
+    html_block(f'<div class="fr-trace">{esc(" → ".join(out["trace"]))}</div>')
+
+
+def render_turn(i: int, turn: dict) -> None:
+    """대화 한 턴의 답변 쪽. 되묻기였다면 분야를 골라 이어서 물을 수 있는 버튼을 붙인다."""
+    if turn.get("error"):
+        st.error(f"실행 실패: {turn['error']}")
+        return
+    out, conf = turn["out"], turn["conf"]
+    t_ans, t_proc = st.tabs(["답변", "처리 과정"])
+    with t_ans:
+        render_summary(out, conf)
+        if out["status"] == "clarify":
+            options = [out["category"]] + ([out["alternative"]] if out.get("alternative") else [])
+            html_block('<div class="fr-h">어느 분야로 물어볼까요?</div>')
+            cols = st.columns(len(options) + 1)
+            for col, k in zip(cols, options):
+                if col.button(f"{CATEGORIES[k]['name']}({k})로 물어보기", key=f"pick_{i}_{k}", type="primary"):
+                    st.session_state["pending"] = {"q": turn["q"], "cat": k}
+                    st.rerun()
+    with t_proc:
+        render_process(out, conf)
+
+
 # ---------------------------------------------------------------------------
 with tab_ask:
-    with st.form("ask"):
-        q = st.text_input("문의 내용", key="q", placeholder="예: 재택근무는 주 며칠까지 돼요?")
-        submitted = st.form_submit_button("문의하기", type="primary")
+    chat = st.session_state.setdefault("chat", [])
+    if not chat:
+        with st.chat_message("assistant", avatar="🏢"):
+            st.markdown("안녕하세요, 새솔컴퍼니 사내 헬프데스크입니다. IT·인사·총무·경비 관련 문의를 남겨 주세요. "
+                        "왼쪽의 예시 질문을 눌러 봐도 됩니다.")
+    for i, turn in enumerate(chat):
+        with st.chat_message("user", avatar="🧑‍💼"):
+            note = ""
+            if turn.get("cat"):
+                k = turn["cat"]
+                note = f"  \n:blue[→ {CATEGORIES[k]['name']}({k}) 분야로 다시 문의]"
+            st.markdown(turn["q"] + note)
+        with st.chat_message("assistant", avatar="🏢"):
+            render_turn(i, turn)
 
-    if submitted and q.strip():
+    typed = st.chat_input("문의 내용을 입력하세요 (예: 재택근무는 주 며칠까지 돼요?)")
+    pending = st.session_state.pop("pending", None)
+    if typed and typed.strip():
+        pending = {"q": typed.strip(), "cat": None}
+    if pending:
         agent = get_agent(provider, (top_k, Settings.min_similarity, conf, use_scope, use_term, use_gate,
                                      decider if provider != "offline" else "llm"))
+        turn = {"q": pending["q"], "cat": pending["cat"], "conf": conf}
         try:
             with st.spinner("판정 → 근거 조립 → 답변 → 검증 중…"):
-                out = agent.run(q.strip())
+                out = agent.run(pending["q"], chosen_category=pending["cat"])
+            out["chosen_category"] = pending["cat"]
+            turn["out"] = out
         except Exception as e:  # 키 오류·쿼터 초과 등
-            st.error(f"실행 실패: {e}")
-            st.stop()
-
-        cat = CATEGORIES[out["category"]]
-        status_label, kind = STATUS[out["status"]]
-        ver = out.get("verification")
-        low = out["category"] != "C0" and out["confidence"] < conf
-
-        # 요약 카드 4개
-        if not ver or out["status"] != "answered":
-            ver_value, ver_sub = pill("해당 없음", "muted"), "담당자 연결·되묻기는 검증하지 않음"
-        else:
-            n_ok = sum(c["passed"] for c in ver["checks"])
-            ver_value = pill("통과" if ver["passed"] else "실패", "ok" if ver["passed"] else "bad")
-            ver_sub = f"검사 {len(ver['checks'])}개 중 {n_ok}개 통과 · 답변 {out.get('attempts', 0)}회 생성"
-        html_block('<div class="fr-kpis">'
-                   + kpi("판정 카테고리", f"{out['category']} · {esc(cat['name'])}", esc(cat["en"]))
-                   + kpi("판정 신뢰도", f"{out['confidence']:.2f}",
-                         f"임계값 {conf:.2f} → " + ("C0은 되묻지 않음" if out["category"] == "C0" else ("되묻기" if low else "통과")))
-                   + kpi("결과", pill(status_label, kind), "도구 " + esc(", ".join(out["tools_called"])))
-                   + kpi("검증", ver_value, ver_sub)
-                   + "</div>")
-
-        # 생성된 답변과 검색된 근거(출처)를 나눠서 보여 준다
-        html_block(f'<div class="fr-answer {kind}">{rich(out["answer"])}</div>')
-        if out["status"] == "answered" and out.get("citations"):
-            html_block('<div class="fr-h">출처</div>' + "".join(
-                f'<div class="fr-src"><span class="fr-cite">{c["id"]}</span> <b>{esc(c["title"])}</b> '
-                f'<span class="m">· {esc(c["doc"])} · {esc(c["source"])} · {esc(c["version"])}</span></div>'
-                for c in out["citations"]))
-
-        st.write("")
-        st.markdown("##### 처리 과정")
-        s1, s2 = st.columns(2, gap="medium")
-        with s1:
-            with st.container(border=True):
-                pct = out["confidence"] * 100
-                body = (f'<div class="fr-step"><span class="fr-num">1</span>카테고리 판정 · {out["category"]} {esc(cat["name"])}</div>'
-                        f'<div class="fr-bar"><div class="fill" style="width:{pct:.0f}%"></div>'
-                        f'<div class="mark" style="left:calc({conf * 100:.0f}% - 1px)" title="임계값"></div></div>'
-                        f'<div class="fr-scale"><span>신뢰도 {out["confidence"]:.2f}</span><span>│ 임계값 {conf:.2f}</span></div>')
-                if out.get("probabilities"):
-                    body += '<div class="fr-note">Jev 카테고리 확률</div>' + "".join(
-                        f'<div class="fr-cand"><span>{k}</span><div class="fr-mini mini"><div class="fill" style="width:{p * 100:.0f}%"></div></div>'
-                        f'<span></span><span>{p:.2f}</span></div>' for k, p in out["probabilities"].items())
-                if out.get("alternative"):
-                    alt = out["alternative"]
-                    body += f'<div class="fr-note">두 번째 후보: {alt} {esc(CATEGORIES[alt]["name"])}</div>'
-                if out.get("evidence_types"):
-                    body += '<div class="fr-note">필요한 근거 유형 ' + "".join(
-                        f'<span class="fr-chip">{esc(t)}</span>' for t in out["evidence_types"]) + "</div>"
-                if out.get("category_reason"):
-                    body += f'<div class="fr-note">{esc(out["category_reason"])}</div>'
-                html_block(body)
-
-            with st.container(border=True):
-                body = f'<div class="fr-step"><span class="fr-num">2</span>근거 조립 · {esc(out.get("tool") or "조회 안 함")}</div>'
-                if out["status"] == "clarify":
-                    body += '<div class="fr-note">신뢰도가 임계값보다 낮아 근거를 조회하지 않고 되물었습니다.</div>'
-                for g in out.get("gate", []):
-                    mark = '<span class="o">✓</span>' if g["passed"] else '<span class="x">✕</span>'
-                    body += f'<div class="fr-check">{mark} <b>{esc(g["check"])}</b> — {esc(g["detail"])}</div>'
-                cands = out.get("candidates") or []
-                if cands:
-                    used = {s.id for s in out.get("sections") or []} if out["status"] == "answered" else set()
-                    top = max(out["scores"].values(), default=1) or 1
-                    secs = load_sections()
-                    body += f'<div class="fr-note" style="margin-top:8px">검색 후보 top_k={len(cands)} · 유사도 순</div>' + "".join(
-                        f'<div class="fr-cand{"" if sid in used else " dim"}"><span class="fr-cite">{sid}</span>'
-                        f'<span>{esc(secs[sid].title)}</span>'
-                        f'<div class="fr-mini mini"><div class="fill" style="width:{out["scores"][sid] / top * 100:.0f}%"></div></div>'
-                        f'<span>{pill("사용", "ok") if sid in used else f"{out["scores"][sid]:.2f}"}</span></div>'
-                        for sid in cands)
-                if out["status"] == "abstained":
-                    body += f'<div class="fr-note">담당자 연결 사유: {esc(out.get("handoff_reason"))}</div>'
-                html_block(body)
-                if out["status"] == "answered":
-                    for s in out.get("sections") or []:
-                        with st.expander(f"[{s.id}] {s.title} 원문 보기"):
-                            st.caption(f"{s.doc_title} · 출처: {s.source} · {s.version}")
-                            st.markdown(s.text)
-
-        with s2:
-            with st.container(border=True):
-                n = out.get("attempts", 0)
-                note = ("근거 섹션만 프롬프트에 넣고 문장마다 섹션 ID를 붙이게 합니다." if n else
-                        "담당자 연결·되묻기라 답변을 만들지 않았습니다.")
-                html_block(f'<div class="fr-step"><span class="fr-num">3</span>답변 생성 · {n}회</div><div class="fr-note">{note}</div>')
-                for i, d in enumerate(out.get("failed_drafts") or [], 1):
-                    with st.expander(f"검증에서 걸러진 초안 {i}"):
-                        html_block(f'<div class="fr-note">{rich(d["answer"])}</div>'
-                                   + "".join(f'<div class="fr-check"><span class="x">✕</span> {esc(p)}</div>' for p in d["problems"]))
-            with st.container(border=True):
-                body = '<div class="fr-step"><span class="fr-num">4</span>검증 · 기계적 검사</div>'
-                if ver and out["status"] == "answered":
-                    for c in ver["checks"]:
-                        mark = '<span class="o">✓</span>' if c["passed"] else '<span class="x">✕</span>'
-                        body += f'<div class="fr-check">{mark} <b>{esc(c["name"])}</b> — {esc(c["detail"])}</div>'
-                else:
-                    body += '<div class="fr-note">담당자 연결·되묻기는 답변을 만들지 않으므로 검증하지 않습니다.</div>'
-                html_block(body)
-        html_block(f'<div class="fr-trace">{esc(" → ".join(out["trace"]))}</div>')
+            turn["error"] = str(e)[:300]
+        chat.append(turn)
+        st.rerun()
 
 # ---------------------------------------------------------------------------
 with tab_eval:
