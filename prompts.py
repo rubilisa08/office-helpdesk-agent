@@ -47,6 +47,21 @@ def router_prompt(question: str, categories: dict) -> tuple[str, str]:
     return system, f"질문: {question}"
 
 
+def scores_prompt(question: str, categories: dict) -> tuple[str, str]:
+    """화면의 분야별 점수 막대용. 판정(router_prompt)과 따로 불러서 판정 결과에는 영향을 주지 않는다."""
+    cat_lines = "\n".join(f"- {k}: {c['name']} — {c['description']}" for k, c in categories.items())
+    system = f"""너는 사내 헬프데스크 문의가 아래 다섯 분야 각각에 해당할 가능성을 매기는 평가자다.
+
+{cat_lines}
+
+규칙:
+- 문의가 '어느 부서의 규정·절차'를 묻는지로 본다. 질문에 나온 단어가 아니라 의도를 본다.
+- 다섯 분야 각각에 0~1 점수를 주고, 합은 1이 되게 한다.
+- 질문만으로 두 분야 중 어느 쪽인지 정할 수 없으면 한쪽으로 몰지 말고 두 분야에 점수를 나눠 준다.
+- JSON으로만 답한다: {{"C0": 0.0, "C1": 0.0, "C2": 0.0, "C3": 0.0, "C4": 0.0}}"""
+    return system, f"질문: {question}"
+
+
 # offline(키 없음) 분류 지침: 분야별 키워드. 가장 많이 겹치는 분야를 고르고, 겹친 비율을 신뢰도로 쓴다.
 OFFLINE_KEYWORDS = {
     "C1": ["it", "비밀번호", "계정", "로그인", "잠김", "sso", "vpn", "otp", "노트북", "모니터", "장비", "소프트웨어", "프로그램",

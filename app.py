@@ -78,6 +78,22 @@ h1 { font-size: 1.7rem !important; }
 .fr-meta { font-size: 13px; margin: 2px 0 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .fr-meta .dot { color: var(--fr-muted); }
 .fr-meta .ok { color: var(--fr-ok); font-weight: 600; } .fr-meta .bad { color: var(--fr-bad); font-weight: 600; }
+.fr-catrow { display: grid; grid-template-columns: 74px 1fr 38px; gap: 8px; align-items: center; font-size: 12.5px;
+  padding: 3px 0; color: var(--fr-muted); }
+.fr-catrow.on { color: inherit; font-weight: 600; }
+.fr-catrow .fr-bar { margin: 0; height: 7px; }
+.fr-catrow .fr-bar .fill { background: rgba(127,127,127,.45); }
+.fr-catrow.on .fr-bar .fill { background: var(--fr-accent); }
+.fr-catrow .v { text-align: right; font-variant-numeric: tabular-nums; }
+.fr-panel-h { font-size: 15px; font-weight: 700; margin: 0 0 2px; }
+.fr-panel-q { font-size: 12.5px; color: var(--fr-muted); margin-bottom: 10px; overflow-wrap: anywhere; }
+.st-key-evidence .fr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 992px) {
+  /* 대화가 길어져도 근거 패널이 화면에 붙어 있도록: 패널의 부모들을 열 높이만큼 늘린 뒤 sticky */
+  [data-testid="stColumn"]:has(.st-key-evidence) > [data-testid="stVerticalBlock"] { height: 100%; }
+  [data-testid="stLayoutWrapper"]:has(> .st-key-evidence) { flex: 1 1 auto; }
+  .st-key-evidence { position: sticky; top: 4rem; max-height: calc(100vh - 5rem); overflow-y: auto; padding-right: 4px; }
+}
 @media (max-width: 760px) { .fr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fr-cand { grid-template-columns: 58px 1fr 46px; } .fr-cand .mini { display: none; } }
 </style>
 """, unsafe_allow_html=True)
@@ -154,6 +170,7 @@ with st.sidebar:
             st.session_state["pending"] = {"q": ex, "cat": None}
     if st.button("🗑️ 새 대화 시작", width="stretch"):
         st.session_state["chat"] = []
+        st.session_state["focus"] = None
     st.divider()
     with st.expander("⚙️ 데모 설정 (시연·채점용)"):
         detected = resolve_provider()
@@ -199,7 +216,7 @@ def render_answer(i: int, turn: dict) -> None:
         options = [out["category"]] + ([out["alternative"]] if out.get("alternative") else [])
         html_block(f'<div class="fr-answer info">질문이 어느 분야를 묻는지 분명하지 않아요(신뢰도 {out["confidence"]:.2f}). '
                    "어느 쪽으로 답해 드릴까요?</div>")
-        cols = st.columns(len(options) + 1)
+        cols = st.columns(len(options))
         for col, k in zip(cols, options):
             if col.button(f"{ro(CATEGORIES[k]['name'])} 물어보기", key=f"pick_{i}_{k}", type="primary",
                           help=CATEGORIES[k]["focus"]):
@@ -213,6 +230,26 @@ def render_answer(i: int, turn: dict) -> None:
             f'<div class="fr-src"><span class="fr-cite">{c["id"]}</span> <b>{esc(c["title"])}</b> '
             f'<span class="m">· {esc(c["doc"])} · {esc(c["source"])} · {esc(c["version"])}</span></div>'
             for c in out["citations"]))
+
+
+def category_bars(out: dict, conf: float) -> str:
+    """분야별 점수 막대(높은 순). 판정 분야는 강조, 세로선은 되묻기 임계값."""
+    scores = out.get("category_scores")
+    if not scores:  # 점수를 내기 전 기록: 신뢰도 막대 하나만
+        scores = {out["category"]: out["confidence"]}
+    rows = ""
+    for k, v in sorted(scores.items(), key=lambda kv: -kv[1]):
+        rows += (f'<div class="fr-catrow{" on" if k == out["category"] else ""}"><span>{esc(CATEGORIES[k]["name"])}</span>'
+                 f'<div class="fr-bar"><div class="fill" style="width:{v * 100:.0f}%"></div>'
+                 f'<div class="mark" style="left:calc({conf * 100:.0f}% - 1px)" title="임계값 {conf:.2f}"></div></div>'
+                 f'<span class="v">{v:.2f}</span></div>')
+    if out.get("chosen_category"):
+        verdict = "사용자가 직접 고른 분야"
+    elif out["category"] == "C0":
+        verdict = "범위 밖은 되묻지 않고 담당자 연결"
+    else:
+        verdict = "되묻기" if out["confidence"] < conf else "통과"
+    return (rows + f'<div class="fr-note">신뢰도 {out["confidence"]:.2f} · 임계값 {conf:.2f}(세로선) → {verdict}</div>')
 
 
 def render_cards(out: dict, conf: float) -> None:
@@ -246,14 +283,11 @@ def render_process(out: dict, conf: float) -> None:
     render_cards(out, conf)
     cat = CATEGORIES[out["category"]]
     ver = out.get("verification")
-    s1, s2 = st.columns(2, gap="medium")
+    s1 = s2 = st.container()  # 패널 폭이 좁아 단계를 한 줄로 쌓는다
     with s1:
         with st.container(border=True):
-            pct = out["confidence"] * 100
-            body = (f'<div class="fr-step"><span class="fr-num">1</span>분야 판정 · {out["category"]} {esc(cat["name"])}</div>'
-                    f'<div class="fr-bar"><div class="fill" style="width:{pct:.0f}%"></div>'
-                    f'<div class="mark" style="left:calc({conf * 100:.0f}% - 1px)" title="임계값"></div></div>'
-                    f'<div class="fr-scale"><span>신뢰도 {out["confidence"]:.2f}</span><span>│ 임계값 {conf:.2f}</span></div>')
+            body = f'<div class="fr-step"><span class="fr-num">1</span>분야 판정 · {out["category"]} {esc(cat["name"])}</div>'
+            body += category_bars(out, conf)
             if out.get("alternative"):
                 alt = out["alternative"]
                 body += f'<div class="fr-note">두 번째 후보: {esc(CATEGORIES[alt]["name"])}</div>'
@@ -339,11 +373,32 @@ def render_turn(i: int, turn: dict) -> None:
     if turn.get("error"):
         render_error(i, turn)
         return
-    t_ans, t_proc = st.tabs(["답변", "처리 과정"])
-    with t_ans:
-        render_answer(i, turn)
-    with t_proc:
-        render_process(turn["out"], turn["conf"])
+    render_answer(i, turn)
+    if st.session_state.get("focus") == i:
+        st.caption("🔎 근거 패널에 표시 중")
+    elif st.button("🔎 이 답의 근거 보기", key=f"focus_{i}", type="tertiary"):
+        st.session_state["focus"] = i
+        st.rerun()
+
+
+def render_panel(chat: list, busy: bool) -> None:
+    """오른쪽 근거 패널: 고른 답(기본은 가장 최근 답)의 판정·근거·검증 과정."""
+    html_block('<div class="fr-panel-h">🔎 이번 답의 근거</div>')
+    if busy:
+        st.caption("새 문의를 처리하고 있어요. 끝나면 여기에 판정·근거·검증 과정이 보여요.")
+        return
+    i = st.session_state.get("focus")
+    if i is None or i >= len(chat):
+        i = len(chat) - 1
+    if i < 0:
+        st.caption("문의를 남기면 여기에 분야 판정 점수, 찾은 근거, 검증 결과가 보여요.")
+        return
+    turn = chat[i]
+    html_block(f'<div class="fr-panel-q">Q. {esc(turn["q"])}</div>')
+    if turn.get("error"):
+        st.caption("이 문의는 오류로 답변을 만들지 못했어요.")
+        return
+    render_process(turn["out"], turn["conf"])
 
 
 def run_with_progress(agent, question: str, cat: str | None) -> dict:
@@ -369,6 +424,8 @@ def run_with_progress(agent, question: str, cat: str | None) -> dict:
 # ---------------------------------------------------------------------------
 with tab_ask:
     chat = st.session_state.setdefault("chat", [])
+    chat_col, side_col = st.columns([7, 5], gap="large")
+with chat_col:
     if not chat:
         with st.chat_message("assistant", avatar="🏢"):
             st.markdown("안녕하세요, 새솔컴퍼니 사내 헬프데스크입니다. IT·인사·총무·경비 관련 문의를 남겨 주세요. "
@@ -387,6 +444,8 @@ with tab_ask:
     pending = st.session_state.pop("pending", None)
     if typed and typed.strip():
         pending = {"q": typed.strip(), "cat": None}
+    with side_col.container(key="evidence"):
+        render_panel(chat, busy=bool(pending))
     if pending:
         with live.chat_message("user", avatar="🧑‍💼"):
             st.markdown(pending["q"])
@@ -400,6 +459,7 @@ with tab_ask:
             except Exception as e:  # 키 오류·쿼터 초과·일시 장애
                 turn["error"] = str(e)[:600]
         chat.append(turn)
+        st.session_state["focus"] = len(chat) - 1  # 새 답이 오면 패널도 그 답으로
         st.rerun()
 
 # ---------------------------------------------------------------------------

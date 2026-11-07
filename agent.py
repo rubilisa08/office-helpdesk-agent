@@ -8,13 +8,14 @@ LangGraph StateGraph로 잇는다. 검증 실패 시 한 번 다시 답하고, �
 from __future__ import annotations
 
 import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
 from context import ABSTAIN, CATEGORIES, CLARIFY, Section, Settings, assemble, load_sections, similarity
 from llm import LLM
-from prompts import OFFLINE_KEYWORDS, OFFLINE_OTHER_SIGNALS, answer_prompt, router_prompt
+from prompts import OFFLINE_KEYWORDS, OFFLINE_OTHER_SIGNALS, answer_prompt, router_prompt, scores_prompt
 from verify import citations, feedback, verify
 
 MAX_ANSWER_ATTEMPTS = 2
@@ -26,6 +27,7 @@ class AgentState(TypedDict, total=False):
     category: str                # ① 판정 결과
     confidence: float            # ① 판정 신뢰도(0~1)
     alternative: str | None      # ① 두 번째 후보 카테고리
+    category_scores: dict        # ① 분야별 점수(합 1, 판정 분야 = 신뢰도)
     evidence_types: list[str]    # ① 필요한 근거 유형
     category_reason: str
     tool: str | None             # ② 조회한 근거 도구
@@ -51,11 +53,11 @@ class AgentState(TypedDict, total=False):
 def offline_classify(question: str) -> dict:
     q = question.lower()
     if any(re.search(p, q) for p in OFFLINE_OTHER_SIGNALS):
-        return {"category": "C0", "confidence": 0.9, "alternative": None, "reason": "범위 밖 신호 키워드"}
+        return {"category": "C0", "confidence": 0.9, "alternative": None, "scores": {}, "reason": "범위 밖 신호 키워드"}
     hits = {k: sum(1 for w in words if w.lower() in q) for k, words in OFFLINE_KEYWORDS.items()}
     total = sum(hits.values())
     if total == 0:
-        return {"category": "C0", "confidence": 0.6, "alternative": None, "reason": "어느 분야 키워드도 없음"}
+        return {"category": "C0", "confidence": 0.6, "alternative": None, "scores": {}, "reason": "어느 분야 키워드도 없음"}
     ranked = sorted(hits, key=lambda k: -hits[k])
     best, second = ranked[0], ranked[1]
     if hits[best] == hits[second]:  # 동점이면 각 카테고리 근거와의 유사도로 순서를 정한다
@@ -64,8 +66,25 @@ def offline_classify(question: str) -> dict:
         best, second = sorted((best, second), key=lambda k: -sims[k])
     return {
         "category": best, "confidence": round(hits[best] / total, 2),
-        "alternative": second if hits[second] else None, "reason": f"키워드 일치 {hits}",
+        "alternative": second if hits[second] else None, "scores": hits, "reason": f"키워드 일치 {hits}",
     }
+
+
+def category_scores(raw, category: str, confidence: float) -> dict[str, float]:
+    """분야별 점수를 판정과 맞춘다: 판정 분야는 신뢰도 그대로, 나머지 분야는 남은 몫(1-신뢰도)을 원래 비율대로 나눈다.
+    막대에 보이는 값과 되묻기에 쓰는 신뢰도가 어긋나지 않게 하기 위해서다."""
+    vals = {}
+    for k in CATEGORIES:
+        try:
+            vals[k] = max(0.0, float((raw or {}).get(k, 0)))
+        except (TypeError, ValueError, AttributeError):
+            vals[k] = 0.0
+    others = [k for k in CATEGORIES if k != category]
+    total = sum(vals[k] for k in others)
+    rest = max(0.0, 1 - confidence)
+    out = {k: (vals[k] / total * rest if total else rest / len(others)) for k in others}
+    out[category] = confidence
+    return {k: round(out[k], 3) for k in CATEGORIES}
 
 
 def offline_answer(question: str, sections: list[Section], max_sentences: int = 5, min_ratio: float = 0.35) -> str:
@@ -94,13 +113,22 @@ def build_graph(llm: LLM, settings: Settings):
         chosen = state.get("chosen_category")
         if chosen in CATEGORIES:  # 되묻기에 사용자가 분야를 골라 답한 경우: 판정 대신 그 선택을 따른다
             return {"category": chosen, "confidence": 1.0, "alternative": None, "evidence_types": [],
+                    "category_scores": category_scores({}, chosen, 1.0),
                     "category_reason": "되묻기에 사용자가 이 분야를 선택했습니다.",
                     "trace": state.get("trace", []) + [f"① 판정: 사용자가 {chosen} 선택"]}
         if llm.online:
-            system, user = router_prompt(q, CATEGORIES)
-            out = llm.json(system, user)
+            # 판정과 화면용 분야별 점수를 동시에 묻는다. 점수 호출은 판정에 쓰지 않고, 실패해도 판정은 그대로 간다.
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                route = pool.submit(llm.json, *router_prompt(q, CATEGORIES))
+                scored = pool.submit(llm.json, *scores_prompt(q, CATEGORIES))
+                out = route.result()
+                try:
+                    raw_scores = scored.result()
+                except Exception:  # noqa: BLE001 - 막대가 없어도 답변은 나가야 한다
+                    raw_scores = {}
         else:
             out = offline_classify(q)
+            raw_scores = out.get("scores")
         cat = out.get("category") if out.get("category") in CATEGORIES else "C0"
         alt = out.get("alternative") if out.get("alternative") in CATEGORIES and out.get("alternative") != cat else None
         try:
@@ -109,6 +137,7 @@ def build_graph(llm: LLM, settings: Settings):
             conf = 0.0
         return {
             "category": cat, "confidence": conf, "alternative": alt,
+            "category_scores": category_scores(raw_scores, cat, conf),
             "evidence_types": out.get("evidence_types") or [], "category_reason": out.get("reason", ""),
             "trace": state.get("trace", []) + [f"① 판정: {cat} (신뢰도 {conf:.2f})"],
         }
