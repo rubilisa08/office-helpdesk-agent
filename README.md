@@ -38,7 +38,7 @@ python evaluate.py --label baseline
 python evaluate.py --data data/holdout.json --label holdout
 ```
 
-손잡이 하나만 바꿔 다시 측정: `--conf 0.7`(신뢰도 임계값), `--top-k 6`, `--no-scope-rules`, `--no-term-coverage`, `--no-llm-gate`, `--provider offline`, `--grader keyword`, `--decider jev`.
+손잡이 하나만 바꿔 다시 측정: `--conf 0.7`(신뢰도 임계값), `--top-k 6`, `--no-scope-rules`, `--no-term-coverage`, `--no-llm-gate`, `--provider offline`, `--grader keyword`.
 
 ## 구조
 
@@ -51,7 +51,7 @@ prompts.py            분류 지침 · 근거 충분성 판단 · 답변 규칙 
 context.py            문서 쪼개기 · 카테고리↔섹션 매핑표 · 근거 조립과 담당자 연결 판단
 agent.py              LangGraph 파이프라인
 verify.py             기계적 검증 (출처·인용 범위·카테고리 일치·계산 재검산·수치·용어·임의 약속 금지)
-llm.py / jev.py       OpenAI·Gemini·offline 백엔드, Jev 의사결정 모델(선택), 응답 캐시
+llm.py                OpenAI·Gemini(Gemma)·offline 백엔드, 대체 모델, 응답 캐시
 evaluate.py           과제 지표 2개 + PRD 지표 5개, 채점기 검증, 오답 분석
 app.py                Streamlit 데모
 results/              측정 기록 (history.md = 개선 시도별 기록표)

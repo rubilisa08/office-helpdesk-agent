@@ -11,10 +11,7 @@
       "confidence_threshold": 0.75,
       "use_scope_rules": true,
       "use_term_coverage": true,
-      "use_llm_gate": true,
-      "decider": "llm",
-      "jev_gate_threshold": 0.5,
-      "jev_support_threshold": 0.5
+      "use_llm_gate": true
     },
     "n": 50,
     "data": "goldenset.json",
@@ -27,10 +24,7 @@
     "abstain_accuracy": 0.92,
     "drafts_caught_by_verifier": 1,
     "api_calls": 0,
-    "cache_hits": 118,
-    "jev_model": null,
-    "jev_calls": 0,
-    "jev_cache_hits": 0
+    "cache_hits": 118
   },
   "records": [
     {
@@ -41,7 +35,6 @@
       ],
       "category": "C1",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_it"
@@ -142,7 +135,6 @@
       ],
       "category": "C1",
       "confidence": 1.0,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_it"
@@ -243,7 +235,6 @@
       ],
       "category": "C1",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_it"
@@ -348,7 +339,6 @@
       ],
       "category": "C1",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_it"
@@ -449,7 +439,6 @@
       ],
       "category": "C1",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_it"
@@ -550,7 +539,6 @@
       ],
       "category": "C1",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_it"
@@ -651,7 +639,6 @@
       ],
       "category": "C1",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_it"
@@ -752,7 +739,6 @@
       ],
       "category": "C1",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_it"
@@ -853,7 +839,6 @@
       ],
       "category": "C1",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -909,7 +894,6 @@
       ],
       "category": "C0",
       "confidence": 1.0,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -949,7 +933,6 @@
       ],
       "category": "C2",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_hr"
@@ -1054,7 +1037,6 @@
       ],
       "category": "C2",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_hr"
@@ -1155,7 +1137,6 @@
       ],
       "category": "C2",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_hr"
@@ -1256,7 +1237,6 @@
       ],
       "category": "C2",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_hr"
@@ -1357,7 +1337,6 @@
       ],
       "category": "C2",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_hr"
@@ -1458,7 +1437,6 @@
       ],
       "category": "C2",
       "confidence": 1.0,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_hr"
@@ -1559,7 +1537,6 @@
       ],
       "category": "C4",
       "confidence": 0.9,
-      "probabilities": null,
       "category_ok": 0,
       "expected_tools": [
         "lookup_hr"
@@ -1622,7 +1599,6 @@
       ],
       "category": "C2",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_hr"
@@ -1723,7 +1699,6 @@
       ],
       "category": "C2",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -1778,7 +1753,6 @@
       ],
       "category": "C2",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -1823,7 +1797,6 @@
       ],
       "category": "C3",
       "confidence": 1.0,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_ga"
@@ -1924,7 +1897,6 @@
       ],
       "category": "C3",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_ga"
@@ -2025,7 +1997,6 @@
       ],
       "category": "C3",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_ga"
@@ -2126,7 +2097,6 @@
       ],
       "category": "C4",
       "confidence": 0.85,
-      "probabilities": null,
       "category_ok": 0,
       "expected_tools": [
         "lookup_ga"
@@ -2189,7 +2159,6 @@
       ],
       "category": "C3",
       "confidence": 0.9,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_ga"
@@ -2290,7 +2259,6 @@
       ],
       "category": "C3",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_ga"
@@ -2391,7 +2359,6 @@
       ],
       "category": "C3",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_ga"
@@ -2492,7 +2459,6 @@
       ],
       "category": "C3",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_ga"
@@ -2597,7 +2563,6 @@
       ],
       "category": "C3",
       "confidence": 0.7,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -2636,7 +2601,6 @@
       ],
       "category": "C0",
       "confidence": 0.9,
-      "probabilities": null,
       "category_ok": 0,
       "expected_tools": [
         "abstain"
@@ -2676,7 +2640,6 @@
       ],
       "category": "C4",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_expense"
@@ -2777,7 +2740,6 @@
       ],
       "category": "C4",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_expense"
@@ -2878,7 +2840,6 @@
       ],
       "category": "C4",
       "confidence": 1.0,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_expense"
@@ -2979,7 +2940,6 @@
       ],
       "category": "C4",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_expense"
@@ -3080,7 +3040,6 @@
       ],
       "category": "C4",
       "confidence": 1.0,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_expense"
@@ -3181,7 +3140,6 @@
       ],
       "category": "C4",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_expense"
@@ -3282,7 +3240,6 @@
       ],
       "category": "C4",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_expense"
@@ -3383,7 +3340,6 @@
       ],
       "category": "C4",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "lookup_expense"
@@ -3485,7 +3441,6 @@
       ],
       "category": "C0",
       "confidence": 0.9,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -3525,7 +3480,6 @@
       ],
       "category": "C4",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -3580,7 +3534,6 @@
       ],
       "category": "C0",
       "confidence": 1.0,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -3620,7 +3573,6 @@
       ],
       "category": "C0",
       "confidence": 1.0,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -3661,7 +3613,6 @@
       ],
       "category": "C0",
       "confidence": 1.0,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -3702,7 +3653,6 @@
       ],
       "category": "C0",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -3742,7 +3692,6 @@
       ],
       "category": "C0",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -3782,7 +3731,6 @@
       ],
       "category": "C0",
       "confidence": 1.0,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -3822,7 +3770,6 @@
       ],
       "category": "C0",
       "confidence": 1.0,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "abstain"
@@ -3863,7 +3810,6 @@
       ],
       "category": "C2",
       "confidence": 0.5,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "clarify"
@@ -3898,7 +3844,6 @@
       ],
       "category": "C3",
       "confidence": 0.5,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "clarify"
@@ -3933,7 +3878,6 @@
       ],
       "category": "C3",
       "confidence": 0.95,
-      "probabilities": null,
       "category_ok": 1,
       "expected_tools": [
         "clarify"

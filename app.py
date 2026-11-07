@@ -84,7 +84,7 @@ h1 { font-size: 1.7rem !important; }
 def get_agent(provider: str, knobs: tuple):
     from agent import Agent
 
-    keys = ("top_k", "min_similarity", "confidence_threshold", "use_scope_rules", "use_term_coverage", "use_llm_gate", "decider")
+    keys = ("top_k", "min_similarity", "confidence_threshold", "use_scope_rules", "use_term_coverage", "use_llm_gate")
     return Agent(provider, Settings(**dict(zip(keys, knobs))))
 
 
@@ -123,8 +123,6 @@ with st.sidebar:
                             help="API 키가 없으면 offline(키워드 분류 + 추출형 답변)으로 동작합니다.")
     if provider != detected and detected == "offline":
         st.warning(".env에 API 키가 없어 이 모드는 실패할 수 있습니다.")
-    decider = st.radio("판정·충분성·근거 지지 판단", ["llm", "jev"], horizontal=True, disabled=provider == "offline",
-                       help="jev: 의사결정 모델이 보정된 확률로 판단합니다(.env에 Jev 키 필요). 답변 작성은 LLM이 합니다.")
     conf = st.slider("판정 신뢰도 임계값", 0.0, 1.0, Settings.confidence_threshold, 0.05,
                      help="판정 신뢰도가 이 값보다 낮으면 근거를 찾기 전에 되묻습니다. C0(범위 밖)은 되묻지 않고 담당자 연결로 안내합니다.")
     top_k = st.slider("검색 후보 섹션 수 (top_k)", 2, 8, Settings.top_k,
@@ -193,10 +191,6 @@ def render_process(out: dict, conf: float) -> None:
                     f'<div class="fr-bar"><div class="fill" style="width:{pct:.0f}%"></div>'
                     f'<div class="mark" style="left:calc({conf * 100:.0f}% - 1px)" title="임계값"></div></div>'
                     f'<div class="fr-scale"><span>신뢰도 {out["confidence"]:.2f}</span><span>│ 임계값 {conf:.2f}</span></div>')
-            if out.get("probabilities"):
-                body += '<div class="fr-note">Jev 카테고리 확률</div>' + "".join(
-                    f'<div class="fr-cand"><span>{k}</span><div class="fr-mini mini"><div class="fill" style="width:{p * 100:.0f}%"></div></div>'
-                    f'<span></span><span>{p:.2f}</span></div>' for k, p in out["probabilities"].items())
             if out.get("alternative"):
                 alt = out["alternative"]
                 body += f'<div class="fr-note">두 번째 후보: {alt} {esc(CATEGORIES[alt]["name"])}</div>'
@@ -301,8 +295,7 @@ with tab_ask:
     if typed and typed.strip():
         pending = {"q": typed.strip(), "cat": None}
     if pending:
-        agent = get_agent(provider, (top_k, Settings.min_similarity, conf, use_scope, use_term, use_gate,
-                                     decider if provider != "offline" else "llm"))
+        agent = get_agent(provider, (top_k, Settings.min_similarity, conf, use_scope, use_term, use_gate))
         turn = {"q": pending["q"], "cat": pending["cat"], "conf": conf}
         try:
             with st.spinner("판정 → 근거 조립 → 답변 → 검증 중…"):
