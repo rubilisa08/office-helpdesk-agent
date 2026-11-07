@@ -75,17 +75,31 @@ h1 { font-size: 1.7rem !important; }
 .fr-check { font-size: 13px; padding: 4px 0; border-top: 1px dashed var(--fr-line); line-height: 1.5; }
 .fr-check b { font-weight: 600; } .fr-check .x { color: var(--fr-bad); font-weight: 700; } .fr-check .o { color: var(--fr-ok); font-weight: 700; }
 .fr-trace { font-size: 12px; color: var(--fr-muted); margin-top: 6px; }
+.fr-meta { font-size: 13px; margin: 2px 0 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.fr-meta .dot { color: var(--fr-muted); }
+.fr-meta .ok { color: var(--fr-ok); font-weight: 600; } .fr-meta .bad { color: var(--fr-bad); font-weight: 600; }
 @media (max-width: 760px) { .fr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fr-cand { grid-template-columns: 58px 1fr 46px; } .fr-cand .mini { display: none; } }
 </style>
 """, unsafe_allow_html=True)
 
 
-@st.cache_resource(show_spinner="에이전트 준비 중…")
+@st.cache_resource(show_spinner="헬프데스크를 준비하고 있어요… (처음 한 번만 30초~1분 걸려요)")
 def get_agent(provider: str, knobs: tuple):
     from agent import Agent
 
     keys = ("top_k", "min_similarity", "confidence_threshold", "use_scope_rules", "use_term_coverage", "use_llm_gate")
     return Agent(provider, Settings(**dict(zip(keys, knobs))))
+
+
+# 화면에 보이는 이름: 코드 이름 대신 사용자 언어로
+TOOL_LABEL = {c["tool"]: f"{c['name']} 규정 조회" for c in CATEGORIES.values() if c["tool"]}
+TOOL_LABEL.update({"abstain": "담당자 연결", "clarify": "되묻기"})
+CHECK_LABEL = {"scope_rule": "범위 확인", "term_coverage": "용어 확인", "llm_gate": "근거 충분성",
+               "similarity": "유사도 확인", "category": "분야 확인"}
+# 진행 표시에서 노드가 끝날 때 보여 줄 문구
+STEP_LABEL = {"classify": "① 분야 판정", "check_confidence": "신뢰도 확인", "clarify": "되묻기 준비",
+              "gather": "② 규정에서 근거 찾기", "answer": "③ 답변 작성", "verify": "④ 검증",
+              "abstain": "담당자 연결 안내", "finalize": "답변 완료"}
 
 
 def esc(text) -> str:
@@ -112,32 +126,49 @@ def html_block(s: str) -> None:
     st.markdown(s, unsafe_allow_html=True)
 
 
+def ro(word: str) -> str:
+    """조사 '로/으로': 받침이 없거나 ㄹ 받침이면 '로', 그 밖의 받침이면 '으로'."""
+    code = ord(word[-1]) - 0xAC00
+    jong = code % 28 if 0 <= code < 11172 else 0
+    return f"{word}{'로' if jong in (0, 8) else '으로'}"
+
+
+def tools_text(tools: list[str]) -> str:
+    return ", ".join(TOOL_LABEL.get(t, t) for t in tools)
+
+
+def human_trace(trace: list[str]) -> str:
+    text = " → ".join(t.removeprefix("→ ") for t in trace)
+    for code, label in TOOL_LABEL.items():
+        text = text.replace(code, label)
+    return text
+
+
 # ---------------------------------------------------------------------------
-# 사이드바: 실행 모드와 실험 손잡이
+# 사이드바: 위에는 사용자가 쓰는 것, 아래 접힌 메뉴에는 시연·채점용 설정
 # ---------------------------------------------------------------------------
 with st.sidebar:
-    st.subheader("설정")
-    detected = resolve_provider()
-    options = ["openai", "gemini", "offline"]
-    provider = st.selectbox("답변 LLM", options, index=options.index(detected) if detected in options else 2,
-                            help="API 키가 없으면 offline(키워드 분류 + 추출형 답변)으로 동작합니다.")
-    if provider != detected and detected == "offline":
-        st.warning(".env에 API 키가 없어 이 모드는 실패할 수 있습니다.")
-    conf = st.slider("판정 신뢰도 임계값", 0.0, 1.0, Settings.confidence_threshold, 0.05,
-                     help="판정 신뢰도가 이 값보다 낮으면 근거를 찾기 전에 되묻습니다. C0(범위 밖)은 되묻지 않고 담당자 연결로 안내합니다.")
-    top_k = st.slider("검색 후보 섹션 수 (top_k)", 2, 8, Settings.top_k,
-                      help="판정된 분야의 섹션 중 질문과 가장 비슷한 k개를 후보로 뽑습니다. 근거 충분성 판단이 그중 필요한 섹션만 골라 답변에 씁니다.")
-    use_scope = st.toggle("범위 규칙으로 담당자 연결", True)
-    use_term = st.toggle("용어 커버리지로 담당자 연결", True)
-    use_gate = st.toggle("근거 충분성 판단(게이트)", True, disabled=provider == "offline")
-    st.divider()
-    st.caption("예시 질문")
+    st.subheader("예시 질문")
     for ex in EXAMPLES:
         if st.button(ex, width="stretch"):
             st.session_state["pending"] = {"q": ex, "cat": None}
-    st.divider()
-    if st.button("새 대화 시작", width="stretch"):
+    if st.button("🗑️ 새 대화 시작", width="stretch"):
         st.session_state["chat"] = []
+    st.divider()
+    with st.expander("⚙️ 데모 설정 (시연·채점용)"):
+        detected = resolve_provider()
+        options = ["openai", "gemini", "offline"]
+        provider = st.selectbox("답변 LLM", options, index=options.index(detected) if detected in options else 2,
+                                help="API 키가 없으면 offline(키워드 분류 + 추출형 답변)으로 동작합니다.")
+        if provider != detected and detected == "offline":
+            st.warning(".env에 API 키가 없어 이 모드는 실패할 수 있습니다.")
+        conf = st.slider("판정 신뢰도 임계값", 0.0, 1.0, Settings.confidence_threshold, 0.05,
+                         help="판정 신뢰도가 이 값보다 낮으면 근거를 찾기 전에 되묻습니다. 범위 밖 질문은 되묻지 않고 담당자 연결로 안내합니다.")
+        top_k = st.slider("검색 후보 섹션 수 (top_k)", 2, 8, Settings.top_k,
+                          help="판정된 분야의 섹션 중 질문과 가장 비슷한 k개를 후보로 뽑습니다. 근거 충분성 판단이 그중 필요한 섹션만 골라 답변에 씁니다.")
+        use_scope = st.toggle("범위 확인으로 담당자 연결", True)
+        use_term = st.toggle("용어 확인으로 담당자 연결", True)
+        use_gate = st.toggle("근거 충분성 판단", True, disabled=provider == "offline")
 
 st.title("🏢 새솔컴퍼니 사내 헬프데스크")
 html_block('<div class="fr-sub">직원 문의를 IT지원·인사·총무·경비정산으로 분류하고 그 분야의 사내 규정에서만 답합니다. '
@@ -146,8 +177,46 @@ html_block('<div class="fr-sub">직원 문의를 IT지원·인사·총무·경�
 tab_ask, tab_eval, tab_map = st.tabs(["문의하기", "평가 결과", "카테고리·근거 매핑"])
 
 
-def render_summary(out: dict, conf: float) -> None:
-    """요약 카드 4개 + 답변 카드 + 출처."""
+def render_meta(out: dict, conf: float) -> None:
+    """답변 위 한 줄 요약: 결과 · 분야 · 신뢰도 · 검증."""
+    cat = CATEGORIES[out["category"]]
+    status_label, kind = STATUS[out["status"]]
+    parts = [pill(status_label, kind), f"<b>{esc(cat['name'])}</b>"]
+    parts.append("직접 선택한 분야" if out.get("chosen_category") else f"신뢰도 {out['confidence']:.2f}")
+    ver = out.get("verification")
+    if out["status"] == "answered" and ver:
+        n_ok = sum(c["passed"] for c in ver["checks"])
+        parts.append(f'<span class="ok">검증 통과 ✓</span> ({n_ok}/{len(ver["checks"])})' if ver["passed"]
+                     else f'<span class="bad">검증 실패</span> ({n_ok}/{len(ver["checks"])})')
+    html_block('<div class="fr-meta">' + ' <span class="dot">·</span> '.join(parts) + "</div>")
+
+
+def render_answer(i: int, turn: dict) -> None:
+    """답변 탭: 한 줄 요약 + 답변 + 출처. 되묻기면 짧은 안내와 분야 버튼만 보여 준다."""
+    out = turn["out"]
+    render_meta(out, turn["conf"])
+    if out["status"] == "clarify":
+        options = [out["category"]] + ([out["alternative"]] if out.get("alternative") else [])
+        html_block(f'<div class="fr-answer info">질문이 어느 분야를 묻는지 분명하지 않아요(신뢰도 {out["confidence"]:.2f}). '
+                   "어느 쪽으로 답해 드릴까요?</div>")
+        cols = st.columns(len(options) + 1)
+        for col, k in zip(cols, options):
+            if col.button(f"{ro(CATEGORIES[k]['name'])} 물어보기", key=f"pick_{i}_{k}", type="primary",
+                          help=CATEGORIES[k]["focus"]):
+                st.session_state["pending"] = {"q": turn["q"], "cat": k}
+                st.rerun()
+        return
+    _, kind = STATUS[out["status"]]
+    html_block(f'<div class="fr-answer {kind}">{rich(out["answer"])}</div>')
+    if out["status"] == "answered" and out.get("citations"):
+        html_block('<div class="fr-h">출처</div>' + "".join(
+            f'<div class="fr-src"><span class="fr-cite">{c["id"]}</span> <b>{esc(c["title"])}</b> '
+            f'<span class="m">· {esc(c["doc"])} · {esc(c["source"])} · {esc(c["version"])}</span></div>'
+            for c in out["citations"]))
+
+
+def render_cards(out: dict, conf: float) -> None:
+    """처리 과정 탭 맨 위의 요약 카드 4개."""
     cat = CATEGORIES[out["category"]]
     status_label, kind = STATUS[out["status"]]
     ver = out.get("verification")
@@ -161,39 +230,33 @@ def render_summary(out: dict, conf: float) -> None:
     if out.get("chosen_category"):
         conf_sub = "사용자가 직접 선택"
     elif out["category"] == "C0":
-        conf_sub = f"임계값 {conf:.2f} → C0은 되묻지 않음"
+        conf_sub = f"임계값 {conf:.2f} → 범위 밖은 되묻지 않음"
     else:
         conf_sub = f"임계값 {conf:.2f} → " + ("되묻기" if low else "통과")
     html_block('<div class="fr-kpis">'
                + kpi("판정 카테고리", f"{out['category']} · {esc(cat['name'])}", esc(cat["en"]))
                + kpi("판정 신뢰도", f"{out['confidence']:.2f}", conf_sub)
-               + kpi("결과", pill(status_label, kind), "도구 " + esc(", ".join(out["tools_called"])))
+               + kpi("결과", pill(status_label, kind), esc(tools_text(out["tools_called"])))
                + kpi("검증", ver_value, ver_sub)
                + "</div>")
-    # 생성된 답변과 검색된 근거(출처)를 나눠서 보여 준다
-    html_block(f'<div class="fr-answer {kind}">{rich(out["answer"])}</div>')
-    if out["status"] == "answered" and out.get("citations"):
-        html_block('<div class="fr-h">출처</div>' + "".join(
-            f'<div class="fr-src"><span class="fr-cite">{c["id"]}</span> <b>{esc(c["title"])}</b> '
-            f'<span class="m">· {esc(c["doc"])} · {esc(c["source"])} · {esc(c["version"])}</span></div>'
-            for c in out["citations"]))
 
 
 def render_process(out: dict, conf: float) -> None:
-    """①~④ 단계별 처리 과정."""
+    """처리 과정 탭: 요약 카드 + ①~④ 단계별 상세."""
+    render_cards(out, conf)
     cat = CATEGORIES[out["category"]]
     ver = out.get("verification")
     s1, s2 = st.columns(2, gap="medium")
     with s1:
         with st.container(border=True):
             pct = out["confidence"] * 100
-            body = (f'<div class="fr-step"><span class="fr-num">1</span>카테고리 판정 · {out["category"]} {esc(cat["name"])}</div>'
+            body = (f'<div class="fr-step"><span class="fr-num">1</span>분야 판정 · {out["category"]} {esc(cat["name"])}</div>'
                     f'<div class="fr-bar"><div class="fill" style="width:{pct:.0f}%"></div>'
                     f'<div class="mark" style="left:calc({conf * 100:.0f}% - 1px)" title="임계값"></div></div>'
                     f'<div class="fr-scale"><span>신뢰도 {out["confidence"]:.2f}</span><span>│ 임계값 {conf:.2f}</span></div>')
             if out.get("alternative"):
                 alt = out["alternative"]
-                body += f'<div class="fr-note">두 번째 후보: {alt} {esc(CATEGORIES[alt]["name"])}</div>'
+                body += f'<div class="fr-note">두 번째 후보: {esc(CATEGORIES[alt]["name"])}</div>'
             if out.get("evidence_types"):
                 body += '<div class="fr-note">필요한 근거 유형 ' + "".join(
                     f'<span class="fr-chip">{esc(t)}</span>' for t in out["evidence_types"]) + "</div>"
@@ -202,12 +265,13 @@ def render_process(out: dict, conf: float) -> None:
             html_block(body)
 
         with st.container(border=True):
-            body = f'<div class="fr-step"><span class="fr-num">2</span>근거 조립 · {esc(out.get("tool") or "조회 안 함")}</div>'
+            tool = TOOL_LABEL.get(out.get("tool"), "조회 안 함")
+            body = f'<div class="fr-step"><span class="fr-num">2</span>근거 찾기 · {esc(tool)}</div>'
             if out["status"] == "clarify":
-                body += '<div class="fr-note">신뢰도가 임계값보다 낮아 근거를 조회하지 않고 되물었습니다.</div>'
+                body += '<div class="fr-note">신뢰도가 임계값보다 낮아 근거를 찾기 전에 되물었습니다.</div>'
             for g in out.get("gate", []):
                 mark = '<span class="o">✓</span>' if g["passed"] else '<span class="x">✕</span>'
-                body += f'<div class="fr-check">{mark} <b>{esc(g["check"])}</b> — {esc(g["detail"])}</div>'
+                body += f'<div class="fr-check">{mark} <b>{esc(CHECK_LABEL.get(g["check"], g["check"]))}</b> — {esc(g["detail"])}</div>'
             cands = out.get("candidates") or []
             if cands:
                 used = {s.id for s in out.get("sections") or []} if out["status"] == "answered" else set()
@@ -220,7 +284,7 @@ def render_process(out: dict, conf: float) -> None:
                                 f'<span>{esc(secs[sid].title)}</span>'
                                 f'<div class="fr-mini mini"><div class="fill" style="width:{out["scores"][sid] / top * 100:.0f}%"></div></div>'
                                 f'<span>{tag}</span></div>')
-                body += f'<div class="fr-note" style="margin-top:8px">검색 후보 top_k={len(cands)} · 유사도 순</div>' + "".join(rows)
+                body += f'<div class="fr-note" style="margin-top:8px">검색 후보 {len(cands)}개 · 질문과 비슷한 순</div>' + "".join(rows)
             if out["status"] == "abstained":
                 body += f'<div class="fr-note">담당자 연결 사유: {esc(out.get("handoff_reason"))}</div>'
             html_block(body)
@@ -233,9 +297,9 @@ def render_process(out: dict, conf: float) -> None:
     with s2:
         with st.container(border=True):
             n = out.get("attempts", 0)
-            note = ("근거 섹션만 프롬프트에 넣고 문장마다 섹션 ID를 붙이게 합니다." if n else
+            note = ("근거 섹션만 보고 답하게 하고, 문장마다 출처 섹션을 붙이게 합니다." if n else
                     "담당자 연결·되묻기라 답변을 만들지 않았습니다.")
-            html_block(f'<div class="fr-step"><span class="fr-num">3</span>답변 생성 · {n}회</div><div class="fr-note">{note}</div>')
+            html_block(f'<div class="fr-step"><span class="fr-num">3</span>답변 작성 · {n}회</div><div class="fr-note">{note}</div>')
             for i, d in enumerate(out.get("failed_drafts") or [], 1):
                 with st.expander(f"검증에서 걸러진 초안 {i}"):
                     html_block(f'<div class="fr-note">{rich(d["answer"])}</div>'
@@ -249,28 +313,57 @@ def render_process(out: dict, conf: float) -> None:
             else:
                 body += '<div class="fr-note">담당자 연결·되묻기는 답변을 만들지 않으므로 검증하지 않습니다.</div>'
             html_block(body)
-    html_block(f'<div class="fr-trace">{esc(" → ".join(out["trace"]))}</div>')
+    html_block(f'<div class="fr-trace">{esc(human_trace(out["trace"]))}</div>')
+
+
+def render_error(i: int, turn: dict) -> None:
+    """오류는 원문 대신 안내 문구와 다시 시도 버튼으로. 원문은 접어 둔다."""
+    err = turn["error"]
+    low = err.lower()
+    if any(k in low for k in ("api_key", "api key", "credential", "401", "unauthorized", "permission_denied")):
+        st.warning("이 모델의 API 키가 없거나 올바르지 않아요. 데모 설정에서 다른 모델을 골라 주세요.", icon="🔑")
+    elif "한도" in err or any(k in low for k in ("quota", "credits", "429")):
+        st.warning("쓸 수 있는 호출 한도를 다 썼어요. 나중에 다시 시도하거나 데모 설정에서 다른 모델을 골라 주세요.", icon="⏳")
+    else:
+        st.warning("일시적인 오류로 답변을 만들지 못했어요. 잠시 후 다시 시도해 주세요.", icon="⚠️")
+    c1, c2 = st.columns([1, 4])
+    if c1.button("다시 시도", key=f"retry_{i}"):
+        st.session_state["chat"].pop(i)
+        st.session_state["pending"] = {"q": turn["q"], "cat": turn.get("cat")}
+        st.rerun()
+    with c2.expander("오류 내용 보기"):
+        st.code(err, language=None)
 
 
 def render_turn(i: int, turn: dict) -> None:
-    """대화 한 턴의 답변 쪽. 되묻기였다면 분야를 골라 이어서 물을 수 있는 버튼을 붙인다."""
     if turn.get("error"):
-        st.error(f"실행 실패: {turn['error']}")
+        render_error(i, turn)
         return
-    out, conf = turn["out"], turn["conf"]
     t_ans, t_proc = st.tabs(["답변", "처리 과정"])
     with t_ans:
-        render_summary(out, conf)
-        if out["status"] == "clarify":
-            options = [out["category"]] + ([out["alternative"]] if out.get("alternative") else [])
-            html_block('<div class="fr-h">어느 분야로 물어볼까요?</div>')
-            cols = st.columns(len(options) + 1)
-            for col, k in zip(cols, options):
-                if col.button(f"{CATEGORIES[k]['name']}({k})로 물어보기", key=f"pick_{i}_{k}", type="primary"):
-                    st.session_state["pending"] = {"q": turn["q"], "cat": k}
-                    st.rerun()
+        render_answer(i, turn)
     with t_proc:
-        render_process(out, conf)
+        render_process(turn["out"], turn["conf"])
+
+
+def run_with_progress(agent, question: str, cat: str | None) -> dict:
+    """단계가 끝날 때마다 ✓를 하나씩 켜는 진행 표시와 함께 실행한다."""
+    out = None
+    with st.status("답변을 준비하고 있어요…", expanded=True) as status:
+        for node, state in agent.stream(question, chosen_category=cat):
+            label = STEP_LABEL.get(node, node)
+            if node == "classify":
+                label += f" — {CATEGORIES[state['category']]['name']}" + (
+                    "(직접 선택)" if cat else f" (신뢰도 {state['confidence']:.2f})")
+            elif node == "gather":
+                label += f" — {len(state.get('sections') or [])}개 섹션" if state.get("sufficient") else " — 근거 부족"
+            elif node == "verify":
+                label += " — 통과" if state["verification"]["passed"] else " — 다시 작성"
+            st.write(f"✓ {label}")
+            out = state
+        done = {"answered": "답변을 마쳤어요", "abstained": "담당 부서로 안내해 드려요", "clarify": "분야를 골라 주세요"}
+        status.update(label=done.get(out.get("status"), "완료"), state="complete", expanded=False)
+    return dict(out)
 
 
 # ---------------------------------------------------------------------------
@@ -284,26 +377,28 @@ with tab_ask:
         with st.chat_message("user", avatar="🧑‍💼"):
             note = ""
             if turn.get("cat"):
-                k = turn["cat"]
-                note = f"  \n:blue[→ {CATEGORIES[k]['name']}({k}) 분야로 다시 문의]"
+                note = f"  \n:blue[→ {CATEGORIES[turn['cat']]['name']} 분야로 다시 문의]"
             st.markdown(turn["q"] + note)
         with st.chat_message("assistant", avatar="🏢"):
             render_turn(i, turn)
 
+    live = st.container()  # 진행 중인 질문은 입력창 위 이 자리에 그린다
     typed = st.chat_input("문의 내용을 입력하세요 (예: 재택근무는 주 며칠까지 돼요?)")
     pending = st.session_state.pop("pending", None)
     if typed and typed.strip():
         pending = {"q": typed.strip(), "cat": None}
     if pending:
-        agent = get_agent(provider, (top_k, Settings.min_similarity, conf, use_scope, use_term, use_gate))
+        with live.chat_message("user", avatar="🧑‍💼"):
+            st.markdown(pending["q"])
         turn = {"q": pending["q"], "cat": pending["cat"], "conf": conf}
-        try:
-            with st.spinner("판정 → 근거 조립 → 답변 → 검증 중…"):
-                out = agent.run(pending["q"], chosen_category=pending["cat"])
-            out["chosen_category"] = pending["cat"]
-            turn["out"] = out
-        except Exception as e:  # 키 오류·쿼터 초과 등
-            turn["error"] = str(e)[:300]
+        with live.chat_message("assistant", avatar="🏢"):
+            try:
+                agent = get_agent(provider, (top_k, Settings.min_similarity, conf, use_scope, use_term, use_gate))
+                out = run_with_progress(agent, pending["q"], pending["cat"])
+                out["chosen_category"] = pending["cat"]
+                turn["out"] = out
+            except Exception as e:  # 키 오류·쿼터 초과·일시 장애
+                turn["error"] = str(e)[:600]
         chat.append(turn)
         st.rerun()
 
@@ -347,7 +442,7 @@ with tab_map:
     rows = []
     for key, c in CATEGORIES.items():
         rows.append({
-            "카테고리": f"{key} · {c['name']} ({c['en']})", "도구": c["tool"] or "abstain",
+            "카테고리": f"{key} · {c['name']} ({c['en']})", "도구": TOOL_LABEL.get(c["tool"] or "abstain"),
             "근거 섹션": ", ".join(f"{s} {secs[s].title}" for s in c["sections"]) or "(없음 → 담당자 연결)",
             "다루지 않는 범위(→ 담당자 연결)": c["out_of_scope"], "넘길 곳": c["handoff_to"],
         })

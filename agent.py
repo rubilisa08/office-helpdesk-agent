@@ -205,10 +205,22 @@ class Agent:
 
     def run(self, question: str, chosen_category: str | None = None) -> AgentState:
         """chosen_category: 되묻기 후 사용자가 고른 분야. 주면 ① 판정을 건너뛰고 그 분야로 근거를 찾는다."""
-        state = {"question": question, "trace": []}
+        return self.graph.invoke(self._start(question, chosen_category))
+
+    def stream(self, question: str, chosen_category: str | None = None):
+        """노드가 끝날 때마다 (노드 이름, 지금까지 합친 상태)를 내보낸다. 데모 화면의 단계별 진행 표시에 쓴다."""
+        state = self._start(question, chosen_category)
+        for chunk in self.graph.stream(state, stream_mode="updates"):
+            for node, update in chunk.items():
+                state.update(update or {})
+                yield node, state
+
+    @staticmethod
+    def _start(question: str, chosen_category: str | None) -> AgentState:
+        state: AgentState = {"question": question, "trace": []}
         if chosen_category:
             state["chosen_category"] = chosen_category
-        return self.graph.invoke(state)
+        return state
 
 
 if __name__ == "__main__":
