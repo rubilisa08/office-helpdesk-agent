@@ -41,15 +41,17 @@ st.markdown("""
   --fr-info: #0C447C; --fr-info-bg: #E6F1FB; --fr-bad: #A32D2D; --fr-bad-bg: #FCEBEB;
 }
 .block-container { padding-top: 3.2rem; max-width: 1240px; }
-/* 상단 남색 바 */
-.fr-top { background: var(--fr-navy); color: #fff; border-radius: 12px; padding: 16px 20px; margin-bottom: 14px;
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.fr-top .logo { width: 40px; height: 40px; border-radius: 10px; background: rgba(255,255,255,.14); display: flex;
-  align-items: center; justify-content: center; font-size: 22px; flex: none; }
-.fr-top .name { font-size: 20px; font-weight: 700; letter-spacing: -.2px; line-height: 1.3; }
-.fr-top .tag { font-size: 13px; color: #B5D4F4; line-height: 1.5; }
-.fr-top .demo { margin-left: auto; font-size: 11.5px; color: #B5D4F4; border: 1px solid rgba(181,212,244,.45);
-  border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+/* 상단 소개 카드: 제목 + 핵심 동작 칩 4개 */
+.fr-top { background: var(--fr-card); border: 1px solid var(--fr-line); border-left: 5px solid var(--fr-accent);
+  border-radius: 0 12px 12px 0; padding: 14px 20px 16px; margin-bottom: 12px; }
+.fr-top .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fr-top .name { font-size: 21px; font-weight: 700; letter-spacing: -.3px; line-height: 1.3; color: var(--fr-text); }
+.fr-top .demo { font-size: 11.5px; color: var(--fr-muted); border: 1px solid var(--fr-line); border-radius: 999px;
+  padding: 1px 9px; white-space: nowrap; }
+.fr-top .feats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.fr-top .feat { font-size: 12.5px; background: var(--fr-tint); color: var(--fr-navy); border-radius: 999px;
+  padding: 3px 11px; white-space: nowrap; }
+.fr-top .feat i { font-style: normal; margin-right: 4px; }
 /* 예시 질문 칩 */
 .fr-chips-h { font-size: 12.5px; color: var(--fr-muted); margin: 2px 0 6px; }
 .st-key-chips { gap: 6px !important; margin-bottom: 6px; }
@@ -220,10 +222,11 @@ with st.sidebar:
     use_term = st.toggle("용어 확인으로 담당자 연결", True)
     use_gate = st.toggle("근거 충분성 판단", True, disabled=provider == "offline")
 
-html_block('<div class="fr-top"><div class="logo">🏢</div><div><div class="name">새솔컴퍼니 사내 헬프데스크</div>'
-           '<div class="tag">IT지원·인사·총무·경비정산 문의를 그 분야의 사내 규정에서만 답합니다. '
-           '분야가 모호하면 되묻고, 규정에 없으면 담당 부서로 연결합니다.</div></div>'
-           '<span class="demo">가상 회사 규정 기반 과제용 데모</span></div>')
+FEATURES = [("🗂️", "IT·인사·총무·경비 4개 분야"), ("📄", "규정 근거로만 답변"),
+            ("❓", "모호하면 되묻기"), ("📞", "규정에 없으면 담당자 연결")]
+html_block('<div class="fr-top"><div class="row"><span class="name">새솔컴퍼니 사내 헬프데스크</span>'
+           '<span class="demo">가상 회사 규정 기반 과제용 데모</span></div><div class="feats">'
+           + "".join(f'<span class="feat"><i>{icon}</i>{text}</span>' for icon, text in FEATURES) + "</div></div>")
 
 tab_ask, tab_eval, tab_map = st.tabs(["문의하기", "평가 결과", "카테고리·근거 매핑"])
 
