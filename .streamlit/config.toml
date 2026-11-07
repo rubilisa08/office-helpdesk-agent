@@ -1,0 +1,11 @@
+# 데모 화면 테마: 오피스 블루(밝은 배경 + 남색 강조)
+[theme]
+base = "light"
+primaryColor = "#185FA5"
+backgroundColor = "#F4F7FB"
+secondaryBackgroundColor = "#E9EFF7"
+textColor = "#1B2A3D"
+borderColor = "#D6E2F0"
+
+[client]
+toolbarMode = "minimal"
